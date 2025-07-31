@@ -15,37 +15,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
-          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache,mode=max
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: SSH into EC2 and deploy
+      - name: Check SSH connectivity
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.AWS_EC2_HOST }}
-          username: ${{ secrets.AWS_EC2_USER }}
-          key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            echo "SSH connection successful!"
+          timeout: 30s
+
+      - name: Deploy application
+        if: success()
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
           script: |
             # Install Docker if not present
             if ! command -v docker &> /dev/null; then
@@ -57,25 +54,20 @@ jobs:
             fi
 
             # Login to Docker Hub
-            echo ${{ secrets.DOCKERHUB_PASSWORD }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+            echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-            # Stop and remove existing container if it exists
+            # Stop and remove existing container
             docker stop laravel-app || true
             docker rm laravel-app || true
-
-            # Clean up old images (keep last 2)
-            docker image prune -a -f --filter "until=24h"
-
-            # Create app directory if not exists
-            mkdir -p /home/ubuntu/laravel-app/storage
-
-            # Create .env file from secret
-            echo "${{ secrets.DOT_ENV }}" > /home/ubuntu/laravel-app/.env
 
             # Pull the latest image
             docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
-            # Run the new container with proper volumes
+            # Create directory structure
+            mkdir -p /home/ubuntu/laravel-app/storage
+            echo "${{ secrets.DOT_ENV }}" > /home/ubuntu/laravel-app/.env
+
+            # Run container
             docker run -d \
               --name laravel-app \
               -p 80:80 \
@@ -85,10 +77,6 @@ jobs:
               ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
             # Run maintenance commands
-            docker exec laravel-app php artisan optimize:clear
             docker exec laravel-app php artisan storage:link || true
-
-            # Verify container is running
-            sleep 10
-            docker ps -a
-            curl -I http://localhost || true
+            docker exec laravel-app php artisan optimize || true
+          timeout: 10m
