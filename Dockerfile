@@ -19,7 +19,7 @@ COPY --from=Composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 
 # Copy existing application directory contents
-COPY ..
+COPY . .
 
 # Copy apache virtual host config file
 COPY ./.docker/vhost.conf /etc/apache2/sites-available/000-default.conf
