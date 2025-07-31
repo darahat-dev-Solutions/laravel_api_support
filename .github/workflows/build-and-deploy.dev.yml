@@ -51,6 +51,6 @@ jobs:
             echo "${{secrets.DOT_ENV}}" > .env
 
             # Run the new container
-            docker run -d -p 80:80 --name laravel-app \
+            docker run -d -p 80:80 --name laravel-app --restart always\
               -v $(pwd)/.env:/var/www/html/.env \
               ${{ secrets.DOCKERHUB_USERNAME}}/laravel-api:latest
