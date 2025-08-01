@@ -81,8 +81,6 @@ jobs:
             # Docker operations
             sudo docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
-
-
             # Setup environment
             mkdir -p /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/storage
             echo "${{ secrets.DOT_ENV }}" > /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/.env
