@@ -15,12 +15,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -39,9 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Verify EC2 Reachability
-        run: |
-          echo "Testing connection to ${{ secrets.AWS_EC2_HOST }}"
-          nc -zv -w 5 ${{ secrets.AWS_EC2_HOST }} 22 || echo "Connection failed"
+        run: nc -zv -w 5 ${{ secrets.AWS_EC2_HOST }} 22
 
   deploy:
     needs: pre-deploy-check
@@ -52,7 +44,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key
           chmod 600 ~/.ssh/ec2_key
-          ssh-keyscan ${{ secrets.AWS_EC2_HOST }} >> ~/.ssh/known_hosts
+          echo "${{ secrets.AWS_EC2_HOST_KEY }}" >> ~/.ssh/known_hosts
 
       - name: Test SSH Connection
         run: |
@@ -62,7 +54,7 @@ jobs:
               "echo 'SSH connection successful!'"
 
       - name: Deploy Application
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ${{ secrets.AWS_EC2_USER }}
@@ -74,23 +66,22 @@ jobs:
               sudo apt-get install -y docker.io
               sudo systemctl enable docker
               sudo systemctl start docker
-              sudo usermod -aG docker $USER
             fi
 
             # Docker operations
-            echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-            docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
+            echo "${{ secrets.DOCKERHUB_PASSWORD }}" | sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+            sudo docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
             # Stop existing container
-            docker stop laravel-app || true
-            docker rm laravel-app || true
+            sudo docker stop laravel-app || true
+            sudo docker rm laravel-app || true
 
             # Setup environment
             mkdir -p /home/ubuntu/laravel-app/storage
             echo "${{ secrets.DOT_ENV }}" > /home/ubuntu/laravel-app/.env
 
             # Run container
-            docker run -d \
+            sudo docker run -d \
               --name laravel-app \
               -p 80:80 \
               --restart unless-stopped \
@@ -99,4 +90,5 @@ jobs:
               ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
             # Post-deploy
-            docker exec laravel-app php artisan optimize
+            sleep 10 # Wait for the container to be ready
+            sudo docker exec laravel-app php artisan optimize
