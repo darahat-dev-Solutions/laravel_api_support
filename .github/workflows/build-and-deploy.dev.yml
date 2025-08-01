@@ -15,50 +15,48 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
-          cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache,mode=max
 
-  deploy:
+  pre-deploy-check:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Check SSH connectivity
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.AWS_EC2_HOST }}
-          username: ${{ secrets.AWS_EC2_USER }}
-          key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
-          script: |
-            echo "SSH connection successful!"
-          timeout: 30s
+      - name: Verify EC2 Reachability
+        run: |
+          echo "Testing connection to ${{ secrets.AWS_EC2_HOST }}"
+          nc -zv -w 5 ${{ secrets.AWS_EC2_HOST }} 22 || echo "Connection failed"
 
-      - name: Deploy application
-        if: success()
+  deploy:
+    needs: pre-deploy-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+          ssh-keyscan ${{ secrets.AWS_EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH Connection
+        run: |
+          ssh -i ~/.ssh/ec2_key \
+              -o StrictHostKeyChecking=no \
+              ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_EC2_HOST }} \
+              "echo 'SSH connection successful!'"
+
+      - name: Deploy Application
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ${{ secrets.AWS_EC2_USER }}
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
-            # Install Docker if not present
+            # Install Docker
             if ! command -v docker &> /dev/null; then
               sudo apt-get update
               sudo apt-get install -y docker.io
@@ -67,17 +65,15 @@ jobs:
               sudo usermod -aG docker $USER
             fi
 
-            # Login to Docker Hub
+            # Docker operations
             echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+            docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
-            # Stop and remove existing container
+            # Stop existing container
             docker stop laravel-app || true
             docker rm laravel-app || true
 
-            # Pull the latest image
-            docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
-
-            # Create directory structure
+            # Setup environment
             mkdir -p /home/ubuntu/laravel-app/storage
             echo "${{ secrets.DOT_ENV }}" > /home/ubuntu/laravel-app/.env
 
@@ -90,7 +86,5 @@ jobs:
               -v /home/ubuntu/laravel-app/storage:/var/www/html/storage \
               ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
-            # Run maintenance commands
-            docker exec laravel-app php artisan storage:link || true
-            docker exec laravel-app php artisan optimize || true
-          timeout: 10m
+            # Post-deploy
+            docker exec laravel-app php artisan optimize
