@@ -5,7 +5,7 @@ on:
     branches: ["main"]
 
 env:
-  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/"${{ secrets.REPOSITORY_NAME }}"
+  DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/laravel-api
   DOCKER_TAG: latest
 
 jobs:
