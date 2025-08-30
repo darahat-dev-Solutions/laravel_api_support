@@ -78,14 +78,17 @@ jobs:
             sudo docker stop "${{ secrets.REPOSITORY_NAME }}" || echo "No container to stop"
             sudo docker rm "${{ secrets.REPOSITORY_NAME }}" ||  echo "No container to remove"
 
-            # Docker operations
+            # Docker operations (Pull latest image)
             sudo docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
             # Setup environment
             mkdir -p /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/storage
             echo "${{ secrets.DOT_ENV }}" > /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/.env
 
-            # Run container
+            # Prune old images
+            sudo docker image prune -a -f
+
+            # Run new container
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
               -p 80:80 \
