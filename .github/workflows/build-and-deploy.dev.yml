@@ -71,11 +71,9 @@ jobs:
             # Docker login
             echo "${{ secrets.DOCKERHUB_PASSWORD }}" | sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-            # Stop and remove any container using the port
+            # Stop and remove any existing container
             sudo docker ps -q --filter "name=${{ secrets.REPOSITORY_NAME }}" | xargs -r sudo docker stop
             sudo docker ps -aq --filter "name=${{ secrets.REPOSITORY_NAME }}" | xargs -r sudo docker rm
-            sudo docker ps -q --filter "publish=80" | xargs -r sudo docker stop
-            sudo docker ps -aq --filter "publish=80" | xargs -r sudo docker rm
 
             # Prune old images
             sudo docker image prune -a -f
@@ -87,16 +85,34 @@ jobs:
             mkdir -p /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/storage
             echo "${{ secrets.DOT_ENV }}" > /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/.env
 
-            # Run new container
+            # Configure Nginx as reverse proxy (ADD THIS PART)
+            echo 'server {
+                listen 80;
+                server_name _;
+
+                location / {
+                    proxy_pass http://localhost:8080;
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                }
+            }' | sudo tee /etc/nginx/conf.d/laravel.conf
+
+            # Test and reload Nginx (ADD THIS PART)
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            # Run Docker container on port 8080 (CHANGED FROM 80:80 TO 8080:80)
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
-              -p 80:80 \
+              -p 8080:80 \  # Changed this line
               --restart unless-stopped \
               -v /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/.env:/var/www/html/.env \
               -v /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/storage:/var/www/html/storage \
               ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
             # Post-deploy optimizations
-            sleep 10 # Wait for container to fully boot
+            sleep 10
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan optimize --no-routes
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan storage:link || true
