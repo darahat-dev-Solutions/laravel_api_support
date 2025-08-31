@@ -121,6 +121,8 @@ jobs:
 
             # Setup environment directory
             echo "Setting up environment..."
+            sudo mkdir -p /tmp/"${{ secrets.REPOSITORY_NAME }}"
+            sudo chown -R $USER:$USER /tmp/"${{ secrets.REPOSITORY_NAME }}"
             mkdir -p /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/framework/{cache,sessions,views} /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/logs
             echo "${{ secrets.DOT_ENV }}" > /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
