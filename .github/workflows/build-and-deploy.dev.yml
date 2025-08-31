@@ -177,9 +177,9 @@ jobs:
             echo "Waiting for container to start..."
             sleep 15
 
-            # DEBUG: List files in the container
-            echo "Listing files in /var/www/html..."
-            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" ls -la /var/www/html
+            # Fix permissions
+            echo "Fixing storage permissions..."
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
             # Post-deploy optimizations
             echo "Running post-deploy optimizations..."
