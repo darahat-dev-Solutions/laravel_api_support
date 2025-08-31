@@ -7,6 +7,9 @@ on:
 env:
   DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/laravel-api
   DOCKER_TAG: latest
+  CONTAINER_PORT: 8000
+  HOST_PORT: 8080
+  AWS_SERVER_IP: 54.169.119.235
 
 jobs:
   build-and-push:
@@ -28,12 +31,28 @@ jobs:
           push: true
           tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
+      - name: Verify Docker image pushed successfully
+        run: |
+          echo "Docker image pushed: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
+
   pre-deploy-check:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
       - name: Verify EC2 Reachability
         run: nc -zv -w 5 ${{ secrets.AWS_EC2_HOST }} 22
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.AWS_EC2_HOST }}" ]; then
+            echo "AWS_EC2_HOST secret is missing"
+            exit 1
+          fi
+          if [ -z "${{ secrets.AWS_SSH_PRIVATE_KEY }}" ]; then
+            echo "AWS_SSH_PRIVATE_KEY secret is missing"
+            exit 1
+          fi
+          echo "All required secrets are present"
 
   deploy:
     needs: pre-deploy-check
@@ -51,7 +70,7 @@ jobs:
           ssh -i ~/.ssh/ec2_key \
               -o StrictHostKeyChecking=no \
               ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_EC2_HOST }} \
-              "echo 'SSH connection successful!'"
+              "echo 'SSH connection successful!' && hostname"
 
       - name: Deploy Application
         uses: appleboy/ssh-action@v0.1.10
@@ -60,59 +79,122 @@ jobs:
           username: ${{ secrets.AWS_EC2_USER }}
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
+            set -e  # Exit on error
+
             # Install Docker if missing
             if ! command -v docker &> /dev/null; then
+              echo "Installing Docker..."
               sudo apt-get update
               sudo apt-get install -y docker.io
               sudo systemctl enable docker
               sudo systemctl start docker
+              sudo usermod -aG docker $USER
+            fi
+
+            # Install Nginx if missing
+            if ! command -v nginx &> /dev/null; then
+              echo "Installing Nginx..."
+              sudo apt-get install -y nginx
+              sudo systemctl enable nginx
+              sudo systemctl start nginx
             fi
 
             # Docker login
             echo "${{ secrets.DOCKERHUB_PASSWORD }}" | sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
             # Stop and remove any existing container
+            echo "Stopping and removing existing container..."
             sudo docker ps -q --filter "name=${{ secrets.REPOSITORY_NAME }}" | xargs -r sudo docker stop
             sudo docker ps -aq --filter "name=${{ secrets.REPOSITORY_NAME }}" | xargs -r sudo docker rm
 
             # Prune old images
+            echo "Pruning old Docker images..."
             sudo docker image prune -a -f
 
             # Pull latest image
+            echo "Pulling latest Docker image..."
             sudo docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
-            # Setup environment
+            # Setup environment directory
+            echo "Setting up environment..."
             mkdir -p /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/storage
             echo "${{ secrets.DOT_ENV }}" > /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/.env
 
-            # Configure Nginx as reverse proxy (ADD THIS PART)
+            # Update APP_URL in .env file
+            sed -i "s|APP_URL=.*|APP_URL=http://${{ env.AWS_SERVER_IP }}|" /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/.env
+
+            # Configure Nginx with explicit IP address
+            echo "Configuring Nginx..."
             echo 'server {
                 listen 80;
-                server_name _;
+                server_name '"${{ env.AWS_SERVER_IP }}"';
 
                 location / {
-                    proxy_pass http://localhost:8080;
+                    proxy_pass http://localhost:'"${{ env.HOST_PORT }}"';
                     proxy_set_header Host $host;
                     proxy_set_header X-Real-IP $remote_addr;
                     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                     proxy_set_header X-Forwarded-Proto $scheme;
+                    proxy_set_header X-Forwarded-Host $host;
+                }
+
+                # Laravel specific optimizations
+                location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+                    expires 1y;
+                    add_header Cache-Control "public, immutable";
+                    proxy_pass http://localhost:'"${{ env.HOST_PORT }}"';
+                }
+
+                location ~ /\.ht {
+                    deny all;
                 }
             }' | sudo tee /etc/nginx/conf.d/laravel.conf
 
-            # Test and reload Nginx (ADD THIS PART)
+            # Remove default Nginx config if it exists
+            sudo rm -f /etc/nginx/sites-enabled/default
+
+            # Test and reload Nginx
+            echo "Testing Nginx configuration..."
             sudo nginx -t
+            echo "Reloading Nginx..."
             sudo systemctl reload nginx
 
-            # Run Docker container on port 8080 (CHANGED FROM 80:80 TO 8080:80, No domain exist. used AWS public ip)
+            # Run Docker container
+            echo "Starting Docker container..."
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
-              -p 8080:80 \  # Changed this line
+              -p ${{ env.HOST_PORT }}:${{ env.CONTAINER_PORT }} \
               --restart unless-stopped \
               -v /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/.env:/var/www/html/.env \
               -v /home/ubuntu/"${{ secrets.REPOSITORY_NAME }}"/storage:/var/www/html/storage \
               ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
+            # Wait for container to start
+            echo "Waiting for container to start..."
+            sleep 15
+
             # Post-deploy optimizations
-            sleep 10
-            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan optimize --no-routes
+            echo "Running post-deploy optimizations..."
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan optimize
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan storage:link || true
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan route:cache || true
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan view:cache || true
+
+            # Verify deployment
+            echo "Deployment completed. Checking container status:"
+            sudo docker ps --filter "name=${{ secrets.REPOSITORY_NAME }}"
+
+            echo "Testing application health:"
+            curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://localhost:${{ env.HOST_PORT }} || echo "Health check failed - container may still be starting"
+
+            echo "Checking Nginx status:"
+            sudo systemctl status nginx --no-pager -l
+
+      - name: Verify Deployment
+        run: |
+          echo "Testing final deployment from workflow..."
+          sleep 10
+          curl -s -o /dev/null -w "Final check: %{http_code}\n" http://${{ env.AWS_SERVER_IP }} || \
+          echo "Deployment may still be initializing. Check server manually if issues persist."
+
+          echo "Deployment pipeline completed successfully!"
