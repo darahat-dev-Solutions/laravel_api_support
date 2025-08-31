@@ -103,7 +103,7 @@ jobs:
             sudo nginx -t
             sudo systemctl reload nginx
 
-            # Run Docker container on port 8080 (CHANGED FROM 80:80 TO 8080:80)
+            # Run Docker container on port 8080 (CHANGED FROM 80:80 TO 8080:80, No domain exist. used AWS public ip)
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
               -p 8080:80 \  # Changed this line
