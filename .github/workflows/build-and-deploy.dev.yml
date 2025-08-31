@@ -177,6 +177,10 @@ jobs:
             echo "Waiting for container to start..."
             sleep 15
 
+            # DEBUG: List files in the container
+            echo "Listing files in /var/www/html..."
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" ls -la /var/www/html
+
             # Post-deploy optimizations
             echo "Running post-deploy optimizations..."
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan optimize
