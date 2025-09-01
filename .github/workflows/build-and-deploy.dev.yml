@@ -166,7 +166,7 @@ jobs:
             sudo systemctl reload nginx
 
             # Run Docker container with correct volume paths
-            echo "Starting Docker container..."
+            echo "Starting Docker container and doing changing the username password..."
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
               -p ${{ env.HOST_PORT }}:${{ env.CONTAINER_PORT }} \
