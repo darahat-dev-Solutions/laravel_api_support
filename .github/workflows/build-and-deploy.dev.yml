@@ -170,6 +170,10 @@ jobs:
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
               -p ${{ env.HOST_PORT }}:${{ env.CONTAINER_PORT }} \
+              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e APP_ENV=production \
+              -e PROJECT_NAME=laravel-api \
               --restart unless-stopped \
               -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env:/var/www/html/.env \
               -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage:/var/www/html/storage \
