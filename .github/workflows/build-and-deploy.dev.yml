@@ -183,7 +183,7 @@ jobs:
             echo "Waiting for container to start..."
             sleep 15
 
-            # Fix permissions
+
             echo "Fixing storage permissions..."
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
