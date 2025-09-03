@@ -126,14 +126,19 @@ jobs:
             mkdir -p /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/framework/{cache,sessions,views} /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/logs
             echo "${{ secrets.DOT_ENV }}" > /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
-            # Update APP_URL in .env file (using the correct /tmp path)
+            # Update .env file with dynamic values
+            echo "Updating .env file..."
             sed -i "s|APP_URL=.*|APP_URL=http://${{ env.AWS_SERVER_IP }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            sed -i "s|DB_USERNAME=.*|DB_USERNAME=${{secrets.DB_USERNAME}}|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
+            sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{secrets.DB_PASSWORD}}|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
+            sed -i "s|APP_ENV=.*|APP_ENV=production|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
+            sed -i "s|PROJECT_NAME=.*|PROJECT_NAME=laravel-api|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
 
             # Configure Nginx with explicit IP address
             echo "Configuring Nginx..."
             echo 'server {
                 listen 80;
-                server_name '"${{ env.AWS_SERVER_IP }}"';
+                server_name '${{ env.AWS_SERVER_IP }}';
 
                 location / {
                     proxy_pass http://localhost:'"${{ env.HOST_PORT }}"';
@@ -166,14 +171,10 @@ jobs:
             sudo systemctl reload nginx
 
             # Run Docker container with correct volume paths
-            echo "Starting Docker container and doing changing the username password..."
+            echo "Starting Docker container ...."
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
               -p ${{ env.HOST_PORT }}:${{ env.CONTAINER_PORT }} \
-              -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e APP_ENV=production \
-              -e PROJECT_NAME=laravel-api \
               --restart unless-stopped \
               -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env:/var/www/html/.env \
               -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage:/var/www/html/storage \
