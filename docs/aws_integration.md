@@ -198,5 +198,5 @@ Now your API works on HTTPS.
 -   auto-deploys to EC2 (without manual SSH)
 
 Or do you want to first **deploy manually** and automate later?
-sudo apt-get update && apt-get install -y nano
+apt-get update && apt-get install -y nano
 nano .env
