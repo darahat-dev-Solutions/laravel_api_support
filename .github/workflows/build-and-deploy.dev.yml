@@ -142,7 +142,7 @@ jobs:
                 server_name '
             sed -i "s|DB_USERNAME=.*|DB_USERNAME=${{secrets.DB_USERNAME}}|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
             sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{secrets.DB_PASSWORD}}|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
-            sed -i "s|APP_ENV=.*|APP_ENV=production|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
+            sed -i "s|APP_ENV=.*|APP_ENV=local|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
             sed -i "s|PROJECT_NAME=.*|PROJECT_NAME=laravel-api|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
 
             # Configure Nginx with explicit IP address
