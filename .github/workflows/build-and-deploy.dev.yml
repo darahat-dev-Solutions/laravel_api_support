@@ -149,6 +149,8 @@ jobs:
             echo "Configuring Nginx..."
             # Configure Nginx by overwriting the default site configuration
             echo "Configuring Nginx..."
+            # Create a custom Nginx configuration for the application
+            echo "Configuring Nginx..."
             echo 'server {
                 listen 80 default_server;
                 server_name _;
@@ -161,18 +163,22 @@ jobs:
                     proxy_set_header X-Forwarded-Proto $scheme;
                     proxy_set_header X-Forwarded-Host $host;
                 }
+            }' | sudo tee /etc/nginx/conf.d/laravel.conf
 
-                # Laravel specific optimizations
-                location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-                    expires 1y;
-                    add_header Cache-Control "public, immutable";
-                    proxy_pass http://localhost:'"${{ env.HOST_PORT }}"';
-                }
+            # Ensure the main nginx.conf includes the conf.d directory
+            sudo sed -i 's|#\s*include /etc/nginx/conf.d/\*.conf;|include /etc/nginx/conf.d/\*.conf;|g' /etc/nginx/nginx.conf
 
-                location ~ /\.ht {
-                    deny all;
-                }
-            }' | sudo tee /etc/nginx/sites-available/default
+            # Test and reload Nginx
+            echo "Testing Nginx configuration..."
+            sudo nginx -t
+            echo "Reloading Nginx..."
+            sudo systemctl reload nginx
+
+            # Final diagnostics: Show Nginx logs from the host
+            echo "--- Nginx Access Log ---"
+            sudo tail -n 50 /var/log/nginx/access.log
+            echo "--- Nginx Error Log ---"
+            sudo tail -n 50 /var/log/nginx/error.log
 
             # Test and reload Nginx
             echo "Testing Nginx configuration..."
