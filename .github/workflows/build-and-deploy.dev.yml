@@ -199,6 +199,12 @@ jobs:
             echo "Fixing storage permissions..."
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
+            # Run diagnostics
+            echo "Creating a test file..."
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" sh -c "echo 'Hello World' > /var/www/html/public/test.txt"
+            echo "Listing all registered routes..."
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan route:list
+
             # Post-deploy optimizations
             echo "Running post-deploy optimizations..."
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan optimize:clear
@@ -215,6 +221,14 @@ jobs:
 
             echo "Checking Nginx status:"
             sudo systemctl status nginx --no-pager -l
+
+            # New diagnostic step: Show Apache logs
+            echo "Waiting for a moment before checking logs..."
+            sleep 15
+            echo "--- Apache Access Log ---"
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" tail -n 50 /var/log/apache2/access.log
+            echo "--- Apache Error Log ---"
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" tail -n 50 /var/log/apache2/error.log
 
       - name: Verify Deployment
         run: |
