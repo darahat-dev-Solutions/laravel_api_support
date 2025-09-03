@@ -199,11 +199,13 @@ jobs:
             echo "Fixing storage permissions..."
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-            # Run diagnostics
-            echo "Creating a test file..."
-            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" sh -c "echo 'Hello World' > /var/www/html/public/test.txt"
-            echo "Listing all registered routes..."
-            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan route:list
+            # Wait for container to start and check its status
+            echo "Waiting for container to initialize..."
+            sleep 15
+            echo "Checking container status:"
+            sudo docker ps -a --filter "name=${{ secrets.REPOSITORY_NAME }}"
+            echo "--- Docker Container Logs ---"
+            sudo docker logs "${{ secrets.REPOSITORY_NAME }}"
 
             # Post-deploy optimizations
             echo "Running post-deploy optimizations..."
@@ -211,24 +213,6 @@ jobs:
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan config:cache
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan route:cache
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan storage:link || true
-
-            # Verify deployment
-            echo "Deployment completed. Checking container status:"
-            sudo docker ps --filter "name=${{ secrets.REPOSITORY_NAME }}"
-
-            echo "Testing application health:"
-            curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://localhost:${{ env.HOST_PORT }} || echo "Health check failed - container may still be starting"
-
-            echo "Checking Nginx status:"
-            sudo systemctl status nginx --no-pager -l
-
-            # New diagnostic step: Show Apache logs
-            echo "Waiting for a moment before checking logs..."
-            sleep 15
-            echo "--- Apache Access Log ---"
-            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" tail -n 50 /var/log/apache2/access.log
-            echo "--- Apache Error Log ---"
-            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" tail -n 50 /var/log/apache2/error.log
 
       - name: Verify Deployment
         run: |
