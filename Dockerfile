@@ -38,7 +38,7 @@ COPY ./.docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 COPY . .
 
 # Install composer dependencies (no dev dependencies for production)
-RUN composer install --no-interaction --optimize-autoloader
+RUN composer install --no-interaction --optimize-autoloader --no-dev
 
 # Create necessary Laravel directories and set permissions
 RUN mkdir -p /var/www/html/storage/framework/{cache,sessions,testing,views} \
