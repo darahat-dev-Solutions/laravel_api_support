@@ -128,7 +128,17 @@ jobs:
 
             # Update .env file with dynamic values
             echo "Updating .env file..."
+            # Update .env file with dynamic values
+            echo "Updating .env file..."
             sed -i "s|APP_URL=.*|APP_URL=http://${{ env.AWS_SERVER_IP }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            sed -i "s|DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+
+            # Configure Nginx with explicit IP address
+            echo "Configuring Nginx..."
+            echo 'server {
+                listen 80;
+                server_name '
             sed -i "s|DB_USERNAME=.*|DB_USERNAME=${{secrets.DB_USERNAME}}|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
             sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{secrets.DB_PASSWORD}}|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
             sed -i "s|APP_ENV=.*|APP_ENV=production|" /tmp/"${{ secrets.REPOSITORY_NAME}}"/.env
