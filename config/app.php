@@ -126,7 +126,6 @@ return [
          * Module Service Providers...
          */
         App\Modules\Auth\AuthServiceProvider::class,
-        App\Modules\Product\ProductServiceProvider::class,
     ])->toArray(),
 
     'key' => env('APP_KEY'),

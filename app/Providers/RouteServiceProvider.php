@@ -34,7 +34,6 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(function () {
                     require base_path('routes/api.php');
                     require base_path('app/Modules/Auth/Routes/api.php');
-                    require base_path('app/Modules/Product/Routes/api.php');
                     require base_path('app/Modules/FormSubmission/Routes/api.php');
                 });
 
