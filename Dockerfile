@@ -36,6 +36,9 @@ COPY ./.docker/vhost.conf /etc/apache2/sites-available/000-default.conf
 
 # Copy application files (excluding what's in .dockerignore)
 COPY . .
+# Explicitly copy Laravel's .htaccess into public folder
+COPY ./public/.htaccess /var/www/html/public/.htaccess
+
 
 # Install composer dependencies (no dev dependencies for production)
 RUN composer install --no-interaction --optimize-autoloader --no-dev
