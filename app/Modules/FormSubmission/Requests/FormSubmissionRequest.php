@@ -24,8 +24,8 @@ class FormSubmissionRequest extends FormRequest
         return [
             'form_id' => 'required|string',
             'submitter_id' => 'required|string',
-            'responses' => 'required|json',
-            'submited_at' => 'required|date',
+            'responses' => 'required|array',
+            'submitted_at' => 'required|date',
         ];
     }
 }

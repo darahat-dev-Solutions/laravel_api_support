@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('form_id');
             $table->string('submitter_id');
             $table->json('responses');
-            $table->dateTime('submited_at');
+            $table->dateTime('submitted_at');
             $table->timestamps();
         });
     }

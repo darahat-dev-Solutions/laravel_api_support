@@ -15,12 +15,12 @@ class FormSubmission extends Model
         'form_id',
         'submitter_id',
         'responses',
-        'submited_at',
+        'submitted_at',
     ];
 
     protected $casts = [
         'responses' => 'array',
-        'submited_at' => 'datetime',
+        'submitted_at' => 'datetime',
     ];
 
     /**

@@ -28,7 +28,7 @@ class FormSubmissionFactory extends Factory
             'form_id' => Str::uuid(),
             'submitter_id' => Str::uuid(),
             'responses' => json_encode(['question1' => 'answer1', 'question2' => 'answer2']),
-            'submited_at' => now(),
+            'submitted_at' => now(),
         ];
     }
 }
