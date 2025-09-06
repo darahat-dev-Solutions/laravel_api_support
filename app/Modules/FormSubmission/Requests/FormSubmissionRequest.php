@@ -22,10 +22,10 @@ class FormSubmissionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'formId' => 'required|string',
-            'submitterId' => 'required|string',
+            'form_id' => 'required|string',
+            'submitter_id' => 'required|string',
             'responses' => 'required|json',
-            'submittedat' => 'required|date',
+            'submited_at' => 'required|date',
         ];
     }
 }

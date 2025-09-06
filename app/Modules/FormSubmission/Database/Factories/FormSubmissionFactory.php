@@ -25,10 +25,10 @@ class FormSubmissionFactory extends Factory
     public function definition(): array
     {
         return [
-            'formId' => Str::uuid(),
-            'submitterId' => Str::uuid(),
+            'form_id' => Str::uuid(),
+            'submitter_id' => Str::uuid(),
             'responses' => json_encode(['question1' => 'answer1', 'question2' => 'answer2']),
-            'submittedat' => now(),
+            'submited_at' => now(),
         ];
     }
 }

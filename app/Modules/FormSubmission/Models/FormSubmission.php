@@ -12,15 +12,15 @@ class FormSubmission extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
-        'formId',
-        'submitterId',
+        'form_id',
+        'submitter_id',
         'responses',
-        'submittedat',
+        'submited_at',
     ];
 
     protected $casts = [
         'responses' => 'array',
-        'submittedat' => 'datetime',
+        'submited_at' => 'datetime',
     ];
 
     /**
