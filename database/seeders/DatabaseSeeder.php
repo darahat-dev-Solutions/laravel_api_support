@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             \App\Modules\FormSubmission\Database\Seeders\FormSubmissionSeeder::class,
+            \App\Modules\AiModule\Database\Seeders\AiModuleSeeder::class,
         ]);
     }
 }
