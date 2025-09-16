@@ -15,7 +15,7 @@ class AiModule extends Model
         'module_id',
         'name',
         'description',
-        'propmpt',
+        'prompt',
         'created_at',
         'updated_at',
     ];

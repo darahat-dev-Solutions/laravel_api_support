@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('module_id');
             $table->string('name');
             $table->string('description');
+            $table->string('prompt');
             $table->dateTime('created_at');
             $table->dateTime('updated_at');
         });

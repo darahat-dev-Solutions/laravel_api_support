@@ -27,7 +27,8 @@ class AiModuleFactory extends Factory
         return [
             'module_id' => Str::uuid(),
             'name' => Str::uuid(),
-            'description' => 'AI will act like a math expert, You are a math expert. Solve problems step by step with clear explanations.',
+            'description' => 'AI will act like a Senior Smart Contract Developer',
+            'prompt' => 'You are a blockchain smart contract engineer. Write secure, gas-optimized contracts using Solidity and best practices.',
             'created_at' => now(),
             'updated_at' => now(),
         ];
