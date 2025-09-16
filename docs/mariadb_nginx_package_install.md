@@ -114,6 +114,16 @@ sudo mysql -u root -e "SELECT VERSION();"
 sudo mysql_secure_installation
 ```
 
+### 8. Connecting to MariaDB
+
+To connect to the MariaDB server and run SQL queries directly, you can use the following command. You will be prompted for the root user's password that you set during the `mysql_secure_installation` step.
+
+```bash
+sudo mysql -u root -p
+```
+
+Once connected, you can run SQL commands like `SHOW DATABASES;` or `USE mysql;`.
+
 ## Common Issues and Solutions
 
 ### 1. `sudo: apt: command not found`
@@ -136,7 +146,20 @@ sudo mysql_secure_installation
 -   **Cause**: Another web server (often httpd) running on port 80
 -   **Solution**: Stop conflicting service and free port 80
 
-### 5. `Refusing to operate on alias name`
+### 5. Port Conflict with Dockerized Applications
+
+-   **Cause**: You are trying to run a Docker container that exposes a web server (like Apache or Nginx) on port 80, but the Nginx service installed on the host machine is already using that port.
+-   **Symptoms**: Docker container fails to start with a port binding error, or requests to your application result in 404 errors served by the host's Nginx instead of your containerized application.
+-   **Solution**: If your application is meant to run inside Docker, you should stop and disable the Nginx service on the host machine to free up the port.
+
+    ```bash
+    # Stop and disable the host Nginx service
+    sudo systemctl stop nginx
+    sudo systemctl disable nginx
+    ```
+    This allows the Docker container to bind to port 80 and handle all incoming traffic.
+
+### 6. `Refusing to operate on alias name`
 
 -   **Cause**: Using alias service names like `mysqld` instead of actual service `mariadb`
 -   **Solution**: Use actual service names from `systemctl list-unit-files`

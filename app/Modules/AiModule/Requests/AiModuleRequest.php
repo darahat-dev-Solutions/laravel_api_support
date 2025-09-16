@@ -25,6 +25,7 @@ class AiModuleRequest extends FormRequest
             'module_id' => 'required|string',
             'name' => 'required|string',
             'description' => 'required|string',
+            'prompt' => 'required|string',
             'created_at' => 'required|date',
             'updated_at' => 'required|date',
         ];
