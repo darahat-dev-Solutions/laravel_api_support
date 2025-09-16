@@ -27,7 +27,7 @@ class AiModuleFactory extends Factory
         return [
             'module_id' => Str::uuid(),
             'name' => Str::uuid(),
-            'description' => 'AI will act like a math expert', 'You are a math expert. Solve problems step by step with clear explanations.',
+            'description' => 'AI will act like a math expert, You are a math expert. Solve problems step by step with clear explanations.',
             'created_at' => now(),
             'updated_at' => now(),
         ];

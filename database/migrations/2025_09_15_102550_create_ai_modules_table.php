@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ai_modules', function (Blueprint $table) {
-             $table->uuid('id')->primary();
+            $table->uuid('id')->primary();
             $table->string('module_id');
             $table->string('name');
             $table->string('description');
@@ -29,4 +29,3 @@ return new class extends Migration
         Schema::dropIfExists('ai_modules');
     }
 };
-
