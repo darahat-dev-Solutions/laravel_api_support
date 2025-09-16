@@ -3,13 +3,12 @@
 namespace App\Modules\AiModule\Models;
 
 use App\Modules\AiModule\Database\Factories\AiModuleFactory;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AiModule extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
 
     protected $fillable = [
         'module_id',
