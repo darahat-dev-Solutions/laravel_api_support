@@ -22,7 +22,6 @@ class AiModuleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'module_id' => 'required|string',
             'name' => 'required|string',
             'description' => 'required|string',
             'prompt' => 'required|string',

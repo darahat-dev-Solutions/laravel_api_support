@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('ai_modules', function (Blueprint $table) {
             $table->id();
-            $table->string('module_id');
             $table->string('name');
             $table->string('description');
             $table->string('prompt');

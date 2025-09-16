@@ -11,7 +11,6 @@ class AiModule extends Model
     use HasFactory;
 
     protected $fillable = [
-        'module_id',
         'name',
         'description',
         'prompt',
