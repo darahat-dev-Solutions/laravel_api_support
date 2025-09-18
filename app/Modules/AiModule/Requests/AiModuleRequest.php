@@ -21,12 +21,18 @@ class AiModuleRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'name' => 'required|string',
-            'description' => 'required|string',
-            'prompt' => 'required|string',
-            'created_at' => 'required|date',
-            'updated_at' => 'required|date',
+        $rules = [
+            'name' => 'sometimes|required|string',
+            'description' => 'sometimes|required|string',
+            'prompt' => 'sometimes|required|string',
+            // 'created_at' => 'required|date',
+            // 'updated_at' => 'required|date',
         ];
+        if($this->isMethod('post')){
+            $rules['name'] = 'required|string';
+            $rules['description'] = 'required|string';
+            $rules['prompt'] = 'required|string';
+        }
+        return $rules;
     }
 }

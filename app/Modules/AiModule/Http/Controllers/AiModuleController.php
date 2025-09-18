@@ -13,7 +13,7 @@ class AiModuleController extends Controller
      */
     public function index()
     {
-        return AiModule::select('id','name')->get();
+        return AiModule::select('id','name','prompt','description')->get();
     }
 
     /**
