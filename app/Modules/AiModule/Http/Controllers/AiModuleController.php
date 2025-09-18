@@ -13,7 +13,7 @@ class AiModuleController extends Controller
      */
     public function index()
     {
-        return AiModule::all();
+        return AiModule::select('id','name')->get();
     }
 
     /**
@@ -32,6 +32,7 @@ class AiModuleController extends Controller
     {
         return $aiModule;
     }
+
 
     /**
      * Update the specified resource in storage.
