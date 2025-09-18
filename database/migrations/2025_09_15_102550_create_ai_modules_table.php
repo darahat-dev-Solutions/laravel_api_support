@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('ai_modules', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('description');
-            $table->string('prompt');
+            $table->text('description');
+            $table->text('prompt');
             $table->dateTime('created_at');
             $table->dateTime('updated_at');
         });
