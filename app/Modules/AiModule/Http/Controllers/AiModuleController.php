@@ -33,6 +33,7 @@ class AiModuleController extends Controller
         return $aiModule;
     }
 
+
     /**
      * Update the specified resource in storage.
      */
