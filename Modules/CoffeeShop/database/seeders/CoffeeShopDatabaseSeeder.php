@@ -11,6 +11,10 @@ class CoffeeShopDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // $this->call([]);
+        $this->call([
+            CustomerSeeder::class,
+            MenuItemSeeder::class,
+            OrderSeeder::class,
+        ]);
     }
 }

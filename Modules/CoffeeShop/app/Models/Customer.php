@@ -2,8 +2,10 @@
 
 namespace Modules\CoffeeShop\Models;
 
+use Modules\CoffeeShop\Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
 {
@@ -27,7 +29,7 @@ class Customer extends Model
     /**
      * Get the orders for the customer.
      */
-    public function orders()
+    public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'customer_id', 'customers_id');
     }

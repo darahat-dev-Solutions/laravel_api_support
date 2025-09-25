@@ -4,6 +4,8 @@ namespace Modules\CoffeeShop\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
@@ -29,7 +31,7 @@ class Order extends Model
     /**
      * Get the customer that owns the order.
      */
-    public function customer()
+    public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id', 'customers_id');
     }
@@ -37,7 +39,7 @@ class Order extends Model
     /**
      * Get the order items for the order.
      */
-    public function orderItems()
+    public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class, 'order_id', 'order_id');
     }

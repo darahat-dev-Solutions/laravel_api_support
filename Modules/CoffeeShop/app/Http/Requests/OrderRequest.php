@@ -43,7 +43,7 @@ class OrderRequest extends FormRequest
         if ($this->isMethod('put') || $this->isMethod('patch')) {
             // Updating order - validate status transitions
             $rules['status'] = 'sometimes|in:pending,preparing,ready,completed,cancelled|' .
-                               'different:' . $this->getCurrentStatus();
+                'different:' . $this->getCurrentStatus();
         }
 
         return $rules;

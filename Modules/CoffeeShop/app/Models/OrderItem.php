@@ -4,6 +4,7 @@ namespace Modules\CoffeeShop\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
 class OrderItem extends Model
@@ -29,7 +30,7 @@ class OrderItem extends Model
     /**
      * Get the order that owns the order item.
      */
-    public function order()
+    public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class, 'order_id', 'order_id');
     }
@@ -37,7 +38,7 @@ class OrderItem extends Model
     /**
      * Get the menu item that this order item refers to.
      */
-    public function menuItem()
+    public function menuItem(): BelongsTo
     {
         return $this->belongsTo(Menu::class, 'item_id', 'item_id');
     }
