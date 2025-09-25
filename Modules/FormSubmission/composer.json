@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/formsubmission",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\FormSubmission\\": "app/",
+            "Modules\\FormSubmission\\Database\\Factories\\": "database/factories/",
+            "Modules\\FormSubmission\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\FormSubmission\\Tests\\": "tests/"
+        }
+    }
+}
