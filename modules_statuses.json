@@ -1,6 +1,6 @@
 {
-    "CoffeeShop": false,
+    "CoffeeShop": true,
     "AiModule": false,
-    "Auth": false,
-    "FormSubmission": false
+    "Auth": true,
+    "FormSubmission": true
 }
