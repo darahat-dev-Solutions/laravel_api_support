@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Modules\CoffeeShop\Models\ItemRating;
 
 class User extends Authenticatable
 {
@@ -44,5 +45,45 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get the item ratings made by the user.
+     */
+    public function itemRatings()
+    {
+        return $this->hasMany(ItemRating::class);
+    }
+
+    /**
+     * Get the user's average rating given to items.
+     */
+    public function getAverageRatingGivenAttribute()
+    {
+        return $this->itemRatings()->avg('rating') ?? 0;
+    }
+
+    /**
+     * Get the count of ratings made by the user.
+     */
+    public function getRatingsCountAttribute()
+    {
+        return $this->itemRatings()->count();
+    }
+
+    /**
+     * Check if user has rated a specific menu item.
+     */
+    public function hasRatedItem($menuItemId)
+    {
+        return $this->itemRatings()->where('menu_item_id', $menuItemId)->exists();
+    }
+
+    /**
+     * Get user's rating for a specific menu item.
+     */
+    public function getRatingForItem($menuItemId)
+    {
+        return $this->itemRatings()->where('menu_item_id', $menuItemId)->first();
     }
 }

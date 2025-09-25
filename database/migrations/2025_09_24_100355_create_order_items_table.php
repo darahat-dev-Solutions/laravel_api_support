@@ -11,12 +11,12 @@ return new class extends Migration
      */
 public function up(): void
 {
-    Schema::create('orders', function (Blueprint $table) {
-        $table->id('order_id');
-        $table->foreignId('customer_id')->constrained('customers', 'customer_id')->onDelete('cascade');
-        $table->timestamp('order_time')->useCurrent();
-        $table->decimal('total_price', 10, 2)->nullable();
-        $table->enum('status', ['pending','preparing','ready','completed','cancelled'])->default('pending');
+    Schema::create('order_items', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('order_id')->constrained('orders', 'order_id')->onDelete('cascade');
+        $table->foreignId('item_id')->constrained('menu', 'item_id')->onDelete('cascade');
+        $table->integer('quantity');
+        $table->decimal('price', 10, 2);
         $table->timestamps();
     });
 }
