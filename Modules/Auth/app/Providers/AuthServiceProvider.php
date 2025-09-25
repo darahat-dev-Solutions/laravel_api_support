@@ -1,14 +1,14 @@
 <?php
 
 namespace Modules\Auth\Providers;
-
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
 class AuthServiceProvider extends ServiceProvider
-{
+
+
     protected string $name = 'Auth';
     protected string $nameLower = 'auth';
 

@@ -114,6 +114,7 @@ return [
         /*
          * Package Service Providers...
          */
+        Nwidart\Modules\LaravelModulesServiceProvider::class,
 
         /*
          * Application Service Providers...
@@ -121,6 +122,7 @@ return [
         App\Providers\AppServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+
 
         /*
          * Module Service Providers...

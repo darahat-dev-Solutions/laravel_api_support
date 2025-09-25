@@ -45,6 +45,7 @@ class AiModuleController extends Controller
     /**
      * Remove the specified resource from storage.
      */
+
     public function destroy(AiModule $aiModule)
     {
         $aiModule->delete();
