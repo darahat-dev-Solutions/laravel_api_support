@@ -2,30 +2,29 @@
 
 namespace Modules\CoffeeShop\Models;
 
-use Modules\CoffeeShop\Database\Factories\OrderItemFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class OrderItem extends Model
 {
     use HasFactory;
 
     protected $table = 'order_items';
-    protected $primaryKey = 'order_item_id';
 
     protected $fillable = [
         'order_id',
         'item_id',
         'quantity',
-        'unit_price',
-        'total_price',
+        'price',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
-        'unit_price' => 'decimal:2',
-        'total_price' => 'decimal:2',
+        'price' => 'decimal:2',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -37,19 +36,46 @@ class OrderItem extends Model
     }
 
     /**
-     * Get the menu item that owns the order item.
+     * Get the menu item that this order item refers to.
      */
     public function menuItem(): BelongsTo
     {
-        return $this->belongsTo(MenuItem::class, 'item_id', 'item_id');
+        return $this->belongsTo(Menu::class, 'item_id', 'item_id');
     }
 
     /**
-     * Set the total price based on quantity and unit price.
+     * Get the subtotal for this order item.
      */
-    public function setTotalPriceAttribute($value): void
+    public function getSubtotalAttribute()
     {
-        $this->attributes['total_price'] = $this->quantity * $this->unit_price;
+        return $this->price * $this->quantity;
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Auto-update order total when order items are created/updated/deleted
+        static::created(function ($orderItem) {
+            $orderItem->order->update([
+                'total_price' => $orderItem->order->orderItems()->sum(DB::raw('price * quantity'))
+            ]);
+        });
+
+        static::updated(function ($orderItem) {
+            $orderItem->order->update([
+                'total_price' => $orderItem->order->orderItems()->sum(DB::raw('price * quantity'))
+            ]);
+        });
+
+        static::deleted(function ($orderItem) {
+            $orderItem->order->update([
+                'total_price' => $orderItem->order->orderItems()->sum(DB::raw('price * quantity'))
+            ]);
+        });
     }
 
     /**
@@ -57,6 +83,6 @@ class OrderItem extends Model
      */
     protected static function newFactory()
     {
-        return OrderItemFactory::new();
+        return \Database\Factories\OrderItemFactory::new();
     }
 }

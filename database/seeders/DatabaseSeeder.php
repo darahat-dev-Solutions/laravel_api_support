@@ -13,16 +13,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Create test user only if it doesn't exist
+        $testUser = User::where('email', 'test@example.com')->first();
+        if (!$testUser) {
+            User::factory()->create([
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+            ]);
+        }
 
         $this->call([
-            \App\Modules\FormSubmission\Database\Seeders\FormSubmissionSeeder::class,
-            \App\Modules\AiModule\Database\Seeders\AiModuleSeeder::class,
+            \Modules\FormSubmission\Database\Seeders\FormSubmissionSeeder::class,
+            \Modules\AiModule\Database\Seeders\AiModuleSeeder::class,
+            \Modules\CoffeeShop\Database\Seeders\CoffeeShopSeeder::class,
         ]);
     }
 }

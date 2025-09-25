@@ -12,12 +12,18 @@ class Customer extends Model
     use HasFactory;
 
     protected $table = 'customers';
-    protected $primaryKey = 'customer_id';
+    protected $primaryKey = 'customers_id';
 
     protected $fillable = [
         'name',
         'email',
         'phone',
+        'img_url',
+    ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -25,7 +31,7 @@ class Customer extends Model
      */
     public function orders(): HasMany
     {
-        return $this->hasMany(Order::class, 'customer_id', 'customer_id');
+        return $this->hasMany(Order::class, 'customer_id', 'customers_id');
     }
 
     /**
@@ -33,6 +39,6 @@ class Customer extends Model
      */
     protected static function newFactory()
     {
-        return CustomerFactory::new();
+        return \Database\Factories\CustomerFactory::new();
     }
 }

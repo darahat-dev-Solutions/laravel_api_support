@@ -2,7 +2,6 @@
 
 namespace Modules\CoffeeShop\Models;
 
-use Modules\CoffeeShop\Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +24,8 @@ class Order extends Model
     protected $casts = [
         'order_time' => 'datetime',
         'total_price' => 'decimal:2',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -32,7 +33,7 @@ class Order extends Model
      */
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'customer_id', 'customer_id');
+        return $this->belongsTo(Customer::class, 'customer_id', 'customers_id');
     }
 
     /**
@@ -44,12 +45,27 @@ class Order extends Model
     }
 
     /**
-     * Calculate and update the total price of the order.
+     * Get the total items count for the order.
      */
-    public function calculateTotalPrice(): void
+    public function getTotalItemsAttribute()
     {
-        $this->total_price = $this->orderItems()->sum('total_price');
-        $this->save();
+        return $this->orderItems()->sum('quantity');
+    }
+
+    /**
+     * Scope a query to only include pending orders.
+     */
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    /**
+     * Scope a query to only include completed orders.
+     */
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', 'completed');
     }
 
     /**
@@ -57,6 +73,6 @@ class Order extends Model
      */
     protected static function newFactory()
     {
-        return OrderFactory::new();
+        return \Database\Factories\OrderFactory::new();
     }
 }
