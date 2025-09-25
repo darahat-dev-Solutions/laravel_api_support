@@ -1,0 +1,11 @@
+{
+    "name": "FormSubmission",
+    "alias": "formsubmission",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\FormSubmission\\Providers\\FormSubmissionServiceProvider"
+    ],
+    "files": []
+}
