@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/coffeeshop",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\CoffeeShop\\": "app/",
+            "Modules\\CoffeeShop\\Database\\Factories\\": "database/factories/",
+            "Modules\\CoffeeShop\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\CoffeeShop\\Tests\\": "tests/"
+        }
+    }
+}
