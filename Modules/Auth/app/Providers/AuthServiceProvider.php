@@ -7,8 +7,7 @@ use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
 class AuthServiceProvider extends ServiceProvider
-
-
+{
     protected string $name = 'Auth';
     protected string $nameLower = 'auth';
 
