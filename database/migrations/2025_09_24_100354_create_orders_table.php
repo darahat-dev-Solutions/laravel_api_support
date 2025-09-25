@@ -13,7 +13,7 @@ public function up(): void
 {
     Schema::create('orders', function (Blueprint $table) {
         $table->id('order_id');
-        $table->foreignId('customer_id')->constrained('customers', 'customer_id')->onDelete('cascade');
+        $table->foreignId('customer_id')->constrained('customers', 'customers_id')->onDelete('cascade');
         $table->timestamp('order_time')->useCurrent();
         $table->decimal('total_price', 10, 2)->nullable();
         $table->enum('status', ['pending','preparing','ready','completed','cancelled'])->default('pending');

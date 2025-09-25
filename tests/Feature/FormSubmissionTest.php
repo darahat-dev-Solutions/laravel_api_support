@@ -1,7 +1,7 @@
 <?php
 namespace Test\Feature;
 
-use App\Modules\FormSubmission\Models\FormSubmission;
+use Modules\FormSubmission\Models\FormSubmission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;

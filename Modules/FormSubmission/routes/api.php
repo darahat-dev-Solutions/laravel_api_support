@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use Modules\FormSubmission\Http\Controllers\FormSubmissionController;
+use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('formsubmissions', FormSubmissionController::class)->names('formsubmission');
+Route::prefix('v1')->group(function () {
+    Route::apiResource('form-submissions', FormSubmissionController::class);
 });

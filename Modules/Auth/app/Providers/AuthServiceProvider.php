@@ -3,17 +3,23 @@
 namespace Modules\Auth\Providers;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
-use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
 class AuthServiceProvider extends ServiceProvider
-{
-    // Removed use PathNamespace; as the trait is undefined
+
 
     protected string $name = 'Auth';
-
     protected string $nameLower = 'auth';
+
+    /**
+     * Resolve the absolute path to this module (replacement for missing module_path helper).
+     */
+    private function modulePath(string $subPath = ''): string
+    {
+        $base = base_path('Modules/'.$this->name);
+        return $subPath ? $base.'/'.ltrim($subPath, '/\\') : $base;
+    }
 
     /**
      * Boot the application events.
@@ -25,7 +31,7 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
-        $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        $this->loadMigrationsFrom($this->modulePath('database/migrations'));
     }
 
     /**
@@ -67,8 +73,8 @@ class AuthServiceProvider extends ServiceProvider
             $this->loadTranslationsFrom($langPath, $this->nameLower);
             $this->loadJsonTranslationsFrom($langPath);
         } else {
-            $this->loadTranslationsFrom(module_path($this->name, 'lang'), $this->nameLower);
-            $this->loadJsonTranslationsFrom(module_path($this->name, 'lang'));
+            $this->loadTranslationsFrom($this->modulePath('lang'), $this->nameLower);
+            $this->loadJsonTranslationsFrom($this->modulePath('lang'));
         }
     }
 
@@ -77,7 +83,7 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected function registerConfig(): void
     {
-        $configPath = module_path($this->name, config('modules.paths.generator.config.path'));
+        $configPath = $this->modulePath(config('modules.paths.generator.config.path'));
 
         if (is_dir($configPath)) {
             $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($configPath));
@@ -122,7 +128,7 @@ class AuthServiceProvider extends ServiceProvider
     public function registerViews(): void
     {
         $viewPath = resource_path('views/modules/'.$this->nameLower);
-        $sourcePath = module_path($this->name, 'resources/views');
+        $sourcePath = $this->modulePath('resources/views');
 
         $this->publishes([$sourcePath => $viewPath], ['views', $this->nameLower.'-module-views']);
 

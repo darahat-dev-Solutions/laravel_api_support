@@ -3,7 +3,8 @@
 namespace Modules\AiModule\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use Modules\AiModule\Models\AiModule;
+use Modules\AiModule\Http\Requests\AiModuleRequest;
 
 class AiModuleController extends Controller
 {
@@ -12,45 +13,42 @@ class AiModuleController extends Controller
      */
     public function index()
     {
-        return view('aimodule::index');
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return view('aimodule::create');
+        return AiModule::select('id','name','prompt','description')->get();
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request) {}
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
+    public function store(AiModuleRequest $request)
     {
-        return view('aimodule::show');
+        $aiModule = AiModule::create($request->validated());
+        return response()->json($aiModule, 201);
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Display the specified resource.
      */
-    public function edit($id)
+    public function show(AiModule $aiModule)
     {
-        return view('aimodule::edit');
+        return $aiModule;
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id) {}
+    public function update(AiModuleRequest $request, AiModule $aiModule)
+    {
+        $aiModule->update($request->validated());
+        return response()->json($aiModule);
+    }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id) {}
+
+    public function destroy(AiModule $aiModule)
+    {
+        $aiModule->delete();
+        return response()->json(null, 204);
+    }
 }

@@ -3,54 +3,57 @@
 namespace Modules\CoffeeShop\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use Modules\CoffeeShop\Models\Order;
+use Modules\CoffeeShop\Models\MenuItem;
+use Modules\CoffeeShop\Models\Customer;
+use Illuminate\Http\JsonResponse;
 
 class CoffeeShopController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display dashboard statistics.
      */
-    public function index()
+    public function dashboard(): JsonResponse
     {
-        return view('coffeeshop::index');
+        $stats = [
+            'total_customers' => Customer::count(),
+            'total_menu_items' => MenuItem::count(),
+            'available_menu_items' => MenuItem::where('is_available', true)->count(),
+            'total_orders' => Order::count(),
+            'pending_orders' => Order::where('status', 'pending')->count(),
+            'preparing_orders' => Order::where('status', 'preparing')->count(),
+            'ready_orders' => Order::where('status', 'ready')->count(),
+            'completed_orders' => Order::where('status', 'completed')->count(),
+            'cancelled_orders' => Order::where('status', 'cancelled')->count(),
+            'total_revenue' => Order::whereIn('status', ['completed'])->sum('total_price'),
+        ];
+
+        return response()->json($stats);
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Get recent orders.
      */
-    public function create()
+    public function recentOrders(): JsonResponse
     {
-        return view('coffeeshop::create');
+        $orders = Order::with(['customer', 'orderItems.menuItem'])
+                      ->orderBy('order_time', 'desc')
+                      ->limit(10)
+                      ->get();
+
+        return response()->json($orders);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Get popular menu items.
      */
-    public function store(Request $request) {}
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
+    public function popularItems(): JsonResponse
     {
-        return view('coffeeshop::show');
+        $popularItems = MenuItem::withCount('orderItems')
+                                ->orderBy('order_items_count', 'desc')
+                                ->limit(10)
+                                ->get();
+
+        return response()->json($popularItems);
     }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        return view('coffeeshop::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id) {}
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id) {}
 }
