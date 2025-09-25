@@ -1,8 +1,6 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use Modules\AiModule\Http\Controllers\AiModuleController;
+use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('aimodules', AiModuleController::class)->names('aimodule');
-});
+Route::apiResource('ai-modules', AiModuleController::class);

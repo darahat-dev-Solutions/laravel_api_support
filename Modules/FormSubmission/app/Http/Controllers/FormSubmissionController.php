@@ -3,7 +3,8 @@
 namespace Modules\FormSubmission\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use Modules\FormSubmission\Models\FormSubmission;
+use Modules\FormSubmission\Http\Requests\FormSubmissionRequest;
 
 class FormSubmissionController extends Controller
 {
@@ -12,45 +13,41 @@ class FormSubmissionController extends Controller
      */
     public function index()
     {
-        return view('formsubmission::index');
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return view('formsubmission::create');
+        return FormSubmission::all();
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request) {}
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
+    public function store(FormSubmissionRequest $request)
     {
-        return view('formsubmission::show');
+        $formSubmission = FormSubmission::create($request->validated());
+        return response()->json($formSubmission, 201);
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Display the specified resource.
      */
-    public function edit($id)
+    public function show(FormSubmission $formSubmission)
     {
-        return view('formsubmission::edit');
+        return $formSubmission;
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id) {}
+    public function update(FormSubmissionRequest $request, FormSubmission $formSubmission)
+    {
+        $formSubmission->update($request->validated());
+        return response()->json($formSubmission);
+    }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id) {}
+    public function destroy(FormSubmission $formSubmission)
+    {
+        $formSubmission->delete();
+        return response()->json(null, 204);
+    }
 }

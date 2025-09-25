@@ -3,54 +3,76 @@
 namespace Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Modules\Auth\Services\AuthService;
+use Modules\Auth\Http\Requests\RegisterRequest;
+use Modules\Auth\Http\Requests\LoginRequest;
+use Modules\Auth\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    protected $authService;
+
+    public function __construct(AuthService $authService)
     {
-        return view('auth::index');
+        $this->authService = $authService;
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Register a new user.
+     *
+     * @param  \Modules\Auth\Http\Requests\RegisterRequest  $request
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function create()
+    public function register(RegisterRequest $request)
     {
-        return view('auth::create');
+        $user = $this->authService->register($request->validated());
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'user' => new UserResource($user),
+            'token' => $token,
+        ], 201);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Authenticate a user and return a token.
+     *
+     * @param  \Modules\Auth\Http\Requests\LoginRequest  $request
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function store(Request $request) {}
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
+    public function login(LoginRequest $request)
     {
-        return view('auth::show');
+        $token = $this->authService->login($request->validated());
+
+        return response()->json([
+            'token' => $token,
+        ]);
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Log the user out.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function edit($id)
+    public function logout(Request $request)
     {
-        return view('auth::edit');
+        $this->authService->logout($request->user());
+
+        return response()->json([
+            'message' => 'Logged out successfully.'
+        ]);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Get the authenticated user.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Modules\Auth\Http\Resources\UserResource
      */
-    public function update(Request $request, $id) {}
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id) {}
+    public function user(Request $request)
+    {
+        return new UserResource($request->user());
+    }
 }
