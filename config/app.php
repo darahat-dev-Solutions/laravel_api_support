@@ -114,6 +114,7 @@ return [
         /*
          * Package Service Providers...
          */
+        Nwidart\Modules\LaravelModulesServiceProvider::class,
 
         /*
          * Application Service Providers...
@@ -122,10 +123,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
 
-        /*
-         * Module Service Providers...
-         */
-        App\Modules\Auth\AuthServiceProvider::class,
+
     ])->toArray(),
 
     'key' => env('APP_KEY'),

@@ -1,7 +1,6 @@
 <?php
 
 namespace Modules\Auth\Providers;
-
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Nwidart\Modules\Traits\PathNamespace;
@@ -10,7 +9,7 @@ use RecursiveIteratorIterator;
 
 class AuthServiceProvider extends ServiceProvider
 {
-    use PathNamespace;
+    // Removed use PathNamespace; as the trait is undefined
 
     protected string $name = 'Auth';
 
