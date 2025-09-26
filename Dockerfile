@@ -39,29 +39,37 @@ COPY . .
 # Explicitly copy Laravel's .htaccess into public folder
 COPY ./public/.htaccess /var/www/html/public/.htaccess
 
+# Create necessary Laravel directories BEFORE composer install
+RUN mkdir -p /var/www/html/storage/framework/{cache,sessions,testing,views} \
+    && mkdir -p /var/www/html/storage/logs \
+    && mkdir -p /var/www/html/bootstrap/cache \
+    && touch /var/www/html/storage/logs/laravel.log \
+    && chown -R www-data:www-data /var/www/html/storage \
+    && chown -R www-data:www-data /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage \
+    && chmod -R 775 /var/www/html/bootstrap/cache
+
 # Ensure modules directories exist and have proper permissions
 RUN mkdir -p Modules/{AiModule,Auth,CoffeeShop,FormSubmission} \
     && chown -R www-data:www-data Modules/
 
+# Copy .env.example to .env for package discovery
+RUN php -r "file_exists('.env') || copy('.env.example', '.env');"
 
 # Install composer dependencies (no dev dependencies for production)
-RUN composer install --no-interaction --optimize-autoloader --no-dev --ignore-platform-reqs
+# Skip scripts to avoid package discovery issues during build
+RUN composer install --no-interaction --optimize-autoloader --no-dev --ignore-platform-reqs --no-scripts
 
-# Generate application key if not exists (for package discovery)
-RUN php -r "file_exists('.env') || copy('.env.example', '.env');" \
-    && php artisan key:generate --ansi || true
+# Generate application key AFTER composer install
+RUN php artisan key:generate --ansi --force
 
-# Clear and rebuild Laravel caches for modules
+# Run package discovery manually after all directories are ready
+RUN php artisan package:discover --ansi
+
+# Clear and rebuild Laravel caches for modules (avoid DB-dependent caches)
 RUN php artisan config:clear || true \
-    && php artisan cache:clear || true \
     && php artisan route:clear || true \
     && php artisan view:clear || true
-
-# Create necessary Laravel directories and set permissions
-RUN mkdir -p /var/www/html/storage/framework/{cache,sessions,testing,views} \
-    && mkdir -p /var/www/html/storage/logs \
-    && chown -R www-data:www-data /var/www/html/storage \
-    && chown -R www-data:www-data /var/www/html/bootstrap/cache
 
 # Enable Apache modules
 RUN a2enmod rewrite headers
