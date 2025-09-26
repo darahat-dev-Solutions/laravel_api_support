@@ -1,0 +1,38 @@
+# Ignore development files
+node_modules
+npm-debug.log
+.npm
+.git
+.gitignore
+README.md
+.env.example
+Dockerfile
+.dockerignore
+
+# Ignore vendor - will be installed in container
+vendor/
+
+# Keep Laravel important files
+!storage/
+!bootstrap/cache/
+
+# Ignore IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Keep modules
+!Modules/
+
+# Ignore logs
+storage/logs/*
+!storage/logs/.gitkeep
+
+# Ignore cache files
+bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+
+# Ignore test files
+tests/
+phpunit.xml
