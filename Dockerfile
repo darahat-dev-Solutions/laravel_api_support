@@ -1,5 +1,5 @@
 # Use official PHP 8.2 image with Apache as base
-FROM php:8.2-apache as base
+FROM php:8.2-apache AS base
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -39,9 +39,23 @@ COPY . .
 # Explicitly copy Laravel's .htaccess into public folder
 COPY ./public/.htaccess /var/www/html/public/.htaccess
 
+# Ensure modules directories exist and have proper permissions
+RUN mkdir -p Modules/{AiModule,Auth,CoffeeShop,FormSubmission} \
+    && chown -R www-data:www-data Modules/
+
 
 # Install composer dependencies (no dev dependencies for production)
-RUN composer install --no-interaction --optimize-autoloader --no-dev
+RUN composer install --no-interaction --optimize-autoloader --no-dev --ignore-platform-reqs
+
+# Generate application key if not exists (for package discovery)
+RUN php -r "file_exists('.env') || copy('.env.example', '.env');" \
+    && php artisan key:generate --ansi || true
+
+# Clear and rebuild Laravel caches for modules
+RUN php artisan config:clear || true \
+    && php artisan cache:clear || true \
+    && php artisan route:clear || true \
+    && php artisan view:clear || true
 
 # Create necessary Laravel directories and set permissions
 RUN mkdir -p /var/www/html/storage/framework/{cache,sessions,testing,views} \
