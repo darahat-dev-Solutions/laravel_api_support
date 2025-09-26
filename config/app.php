@@ -127,7 +127,7 @@ return [
         /*
          * Module Service Providers...
          */
-        Modules\Auth\Providers\AuthServiceProvider::class,
+        // Modules are auto-registered via nwidart/laravel-modules based on modules_statuses.json
     ])->toArray(),
 
     'key' => env('APP_KEY'),

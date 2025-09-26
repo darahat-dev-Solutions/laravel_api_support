@@ -84,6 +84,6 @@ class User extends Authenticatable
      */
     public function getRatingForItem($menuItemId)
     {
-        return $this->itemRatings()->where('menu_item_id', $menuItemId)->first();
+        return $this->itemRatings()->where('item_id', $menuItemId)->first();
     }
 }

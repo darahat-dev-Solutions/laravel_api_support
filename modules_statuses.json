@@ -1,6 +1,6 @@
 {
     "CoffeeShop": true,
-    "AiModule": false,
+    "AiModule": true,
     "Auth": true,
     "FormSubmission": true
 }

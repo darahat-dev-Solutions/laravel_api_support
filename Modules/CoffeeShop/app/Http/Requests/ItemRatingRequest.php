@@ -24,7 +24,7 @@ class ItemRatingRequest extends FormRequest
     {
         $rules = [
             'user_id' => 'sometimes|required|exists:users,id',
-            'item_id' => 'sometimes|required|exists:menu,item_id',
+            'item_id' => 'sometimes|required|exists:menu_items,item_id',
             'rating' => 'sometimes|required|integer|between:1,5',
             'review' => 'sometimes|nullable|string|max:1000',
         ];
@@ -32,7 +32,7 @@ class ItemRatingRequest extends FormRequest
         if ($this->isMethod('post')) {
             // Creating new rating - required fields
             $rules['user_id'] = 'required|exists:users,id';
-            $rules['item_id'] = 'required|exists:menu,item_id';
+            $rules['item_id'] = 'required|exists:menu_items,item_id';
             $rules['rating'] = 'required|integer|between:1,5';
         }
 
@@ -106,7 +106,7 @@ class ItemRatingRequest extends FormRequest
 
             // Validate that menu item exists and get its name for better error messages
             if ($this->has('item_id')) {
-                $menuItem = \Modules\CoffeeShop\Models\Menu::find($this->item_id);
+                $menuItem = \Modules\CoffeeShop\Models\MenuItem::find($this->item_id);
                 if (!$menuItem) {
                     $validator->errors()->add(
                         'item_id',

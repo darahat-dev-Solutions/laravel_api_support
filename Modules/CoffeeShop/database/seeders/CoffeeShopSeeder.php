@@ -6,7 +6,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use Modules\CoffeeShop\Models\Customer;
-use Modules\CoffeeShop\Models\Menu;
+use Modules\CoffeeShop\Models\MenuItem;
 use Modules\CoffeeShop\Models\Order;
 use Modules\CoffeeShop\Models\OrderItem;
 use Modules\CoffeeShop\Models\ItemRating;
@@ -29,12 +29,12 @@ class CoffeeShopSeeder extends Seeder
         $this->command->info('🧑‍🤝‍🧑 Created 25 customers');
 
         // Create menu items
-        $menuItems = Menu::factory(30)->create([
+        $menuItems = MenuItem::factory(30)->create([
             'is_available' => true
         ]);
 
         // Create a few unavailable items
-        Menu::factory(5)->create([
+        MenuItem::factory(5)->create([
             'is_available' => false
         ]);
 
@@ -152,14 +152,14 @@ class CoffeeShopSeeder extends Seeder
         $this->command->info('📊 Summary:');
         $this->command->info('   - Users: ' . User::count());
         $this->command->info('   - Customers: ' . Customer::count());
-        $this->command->info('   - Menu Items: ' . Menu::count());
+        $this->command->info('   - Menu Items: ' . MenuItem::count());
         $this->command->info('   - Orders: ' . Order::count());
         $this->command->info('   - Order Items: ' . OrderItem::count());
         $this->command->info('   - Ratings: ' . ItemRating::count());
 
         // Display some statistics
         $avgRating = ItemRating::avg('rating');
-        $topRatedItem = Menu::withAvg('ratings', 'rating')
+        $topRatedItem = MenuItem::withAvg('ratings', 'rating')
             ->orderByDesc('ratings_avg_rating')
             ->first();
 

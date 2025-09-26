@@ -82,3 +82,14 @@ php artisan serve
 ```
 
 The application will be accessible at `http://127.0.0.1:8000`.
+
+Laravel Cache Realted Issue Commands
+
+composer dump-autoload
+php artisan cache:clear
+
+php artisan config:clear
+
+php artisan route:clear
+
+php artisan view:clear
