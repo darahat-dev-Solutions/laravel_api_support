@@ -29,7 +29,7 @@ class OrderRequest extends FormRequest
 
             // Order items (for creating order with items)
             'items' => 'sometimes|array|min:1',
-            'items.*.item_id' => 'required_with:items|exists:menu,item_id',
+            'items.*.item_id' => 'required_with:items|exists:menu_items,item_id',
             'items.*.quantity' => 'required_with:items|integer|min:1|max:99',
             'items.*.price' => 'sometimes|numeric|min:0',
         ];
@@ -103,7 +103,7 @@ class OrderRequest extends FormRequest
             // Validate menu items are available when creating orders
             if ($this->isMethod('post') && $this->has('items')) {
                 foreach ($this->items as $index => $item) {
-                    $menuItem = \Modules\CoffeeShop\Models\Menu::find($item['item_id']);
+                    $menuItem = \Modules\CoffeeShop\Models\MenuItem::find($item['item_id']);
                     if ($menuItem && !$menuItem->is_available) {
                         $validator->errors()->add(
                             "items.{$index}.item_id",

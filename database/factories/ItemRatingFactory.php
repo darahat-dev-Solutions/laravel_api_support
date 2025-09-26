@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Modules\CoffeeShop\Models\ItemRating;
-use Modules\CoffeeShop\Models\Menu;
+use Modules\CoffeeShop\Models\MenuItem;
 use App\Models\User;
 
 class ItemRatingFactory extends Factory
@@ -20,7 +20,7 @@ class ItemRatingFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'menu_item_id' => Menu::factory(),
+            'item_id' => MenuItem::factory(),
             'rating' => $this->faker->numberBetween(1, 5),
             'review' => $this->faker->optional(0.7)->paragraph(2), // 70% chance of having a review
         ];

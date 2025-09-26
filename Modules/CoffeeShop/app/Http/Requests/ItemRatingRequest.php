@@ -24,7 +24,7 @@ class ItemRatingRequest extends FormRequest
     {
         $rules = [
             'user_id' => 'sometimes|required|exists:users,id',
-            'menu_item_id' => 'sometimes|required|exists:menu,item_id',
+            'item_id' => 'sometimes|required|exists:menu_items,item_id',
             'rating' => 'sometimes|required|integer|between:1,5',
             'review' => 'sometimes|nullable|string|max:1000',
         ];
@@ -32,7 +32,7 @@ class ItemRatingRequest extends FormRequest
         if ($this->isMethod('post')) {
             // Creating new rating - required fields
             $rules['user_id'] = 'required|exists:users,id';
-            $rules['menu_item_id'] = 'required|exists:menu,item_id';
+            $rules['item_id'] = 'required|exists:menu_items,item_id';
             $rules['rating'] = 'required|integer|between:1,5';
         }
 
@@ -47,8 +47,8 @@ class ItemRatingRequest extends FormRequest
         return [
             'user_id.required' => 'User is required for the rating.',
             'user_id.exists' => 'Selected user does not exist.',
-            'menu_item_id.required' => 'Menu item is required for the rating.',
-            'menu_item_id.exists' => 'Selected menu item does not exist.',
+            'item_id.required' => 'Menu item is required for the rating.',
+            'item_id.exists' => 'Selected menu item does not exist.',
             'rating.required' => 'Rating is required.',
             'rating.integer' => 'Rating must be a whole number.',
             'rating.between' => 'Rating must be between 1 and 5 stars.',
@@ -63,7 +63,7 @@ class ItemRatingRequest extends FormRequest
     {
         return [
             'user_id' => 'user',
-            'menu_item_id' => 'menu item',
+            'item_id' => 'menu item',
             'rating' => 'rating',
             'review' => 'review',
         ];
@@ -76,15 +76,15 @@ class ItemRatingRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             // Check for duplicate rating (user can only rate an item once)
-            if ($this->isMethod('post') && $this->has('user_id') && $this->has('menu_item_id')) {
+            if ($this->isMethod('post') && $this->has('user_id') && $this->has('item_id')) {
                 $existingRating = \Modules\CoffeeShop\Models\ItemRating::where([
                     'user_id' => $this->user_id,
-                    'menu_item_id' => $this->menu_item_id
+                    'item_id' => $this->item_id
                 ])->first();
 
                 if ($existingRating) {
                     $validator->errors()->add(
-                        'menu_item_id',
+                        'item_id',
                         'You have already rated this item. Please update your existing rating instead.'
                     );
                 }
@@ -105,11 +105,11 @@ class ItemRatingRequest extends FormRequest
             }
 
             // Validate that menu item exists and get its name for better error messages
-            if ($this->has('menu_item_id')) {
-                $menuItem = \Modules\CoffeeShop\Models\Menu::find($this->menu_item_id);
+            if ($this->has('item_id')) {
+                $menuItem = \Modules\CoffeeShop\Models\MenuItem::find($this->item_id);
                 if (!$menuItem) {
                     $validator->errors()->add(
-                        'menu_item_id',
+                        'item_id',
                         'The selected menu item does not exist.'
                     );
                 } else {

@@ -1,0 +1,14 @@
+{
+    "name": "AiModule",
+    "alias": "aimodule",
+    "description": "AI Module for managing AI assistants and their prompts",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\AiModule\\Providers\\AiModuleServiceProvider",
+        "Modules\\AiModule\\Providers\\RouteServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

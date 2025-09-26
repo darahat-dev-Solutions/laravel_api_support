@@ -23,7 +23,7 @@ class OrderItemRequest extends FormRequest
     {
         $rules = [
             'order_id' => 'sometimes|required|exists:orders,order_id',
-            'item_id' => 'sometimes|required|exists:menu,item_id',
+            'item_id' => 'sometimes|required|exists:menu_items,item_id',
             'quantity' => 'sometimes|required|integer|min:1|max:99',
             'price' => 'sometimes|required|numeric|min:0|max:999.99',
         ];
@@ -31,7 +31,7 @@ class OrderItemRequest extends FormRequest
         if ($this->isMethod('post')) {
             // Creating new order item - all fields required
             $rules['order_id'] = 'required|exists:orders,order_id';
-            $rules['item_id'] = 'required|exists:menu,item_id';
+            $rules['item_id'] = 'required|exists:menu_items,item_id';
             $rules['quantity'] = 'required|integer|min:1|max:99';
             $rules['price'] = 'required|numeric|min:0|max:999.99';
         }
@@ -81,7 +81,7 @@ class OrderItemRequest extends FormRequest
         $validator->after(function ($validator) {
             // Check if menu item is available
             if ($this->has('item_id')) {
-                $menuItem = \Modules\CoffeeShop\Models\Menu::find($this->item_id);
+                $menuItem = \Modules\CoffeeShop\Models\MenuItem::find($this->item_id);
                 if ($menuItem && !$menuItem->is_available) {
                     $validator->errors()->add(
                         'item_id',
@@ -103,7 +103,7 @@ class OrderItemRequest extends FormRequest
 
             // Validate price matches menu item price (if not explicitly provided)
             if ($this->has('item_id') && !$this->has('price')) {
-                $menuItem = \Modules\CoffeeShop\Models\Menu::find($this->item_id);
+                $menuItem = \Modules\CoffeeShop\Models\MenuItem::find($this->item_id);
                 if ($menuItem) {
                     // Auto-set the price from menu item
                     $this->merge(['price' => $menuItem->price]);
@@ -134,7 +134,7 @@ class OrderItemRequest extends FormRequest
     {
         // If price is not provided, try to get it from the menu item
         if ($this->has('item_id') && !$this->has('price')) {
-            $menuItem = \Modules\CoffeeShop\Models\Menu::find($this->item_id);
+            $menuItem = \Modules\CoffeeShop\Models\MenuItem::find($this->item_id);
             if ($menuItem) {
                 $this->merge(['price' => $menuItem->price]);
             }

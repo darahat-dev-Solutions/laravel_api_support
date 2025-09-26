@@ -40,7 +40,7 @@ class OrderItem extends Model
      */
     public function menuItem(): BelongsTo
     {
-        return $this->belongsTo(Menu::class, 'item_id', 'item_id');
+        return $this->belongsTo(MenuItem::class, 'item_id', 'item_id');
     }
 
     /**
