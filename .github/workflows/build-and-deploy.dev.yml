@@ -10,6 +10,7 @@ env:
   CONTAINER_PORT: 80
   HOST_PORT: 8080
   AWS_SERVER_IP: 54.169.119.235
+  DOCKER_BUILD_DEBUG: 1 # Toggle to 0 to disable verbose build diagnostics
 
 jobs:
   build-and-push:
@@ -24,12 +25,47 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Show git context (debug)
+        run: |
+          echo "Listing top-level files"; ls -al . | head -n 100
+          echo "Git status:"; git status
+          echo "Searching for .env.example presence:"; find . -maxdepth 2 -name '.env.example'
+
+      - name: Build and push Docker image (debug capable)
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
+          build-args: |
+            ENABLE_BUILD_DEBUG=${{ env.DOCKER_BUILD_DEBUG }}
+          provenance: false
+          no-cache: false
+          labels: build_run=${{ github.run_id }}
+          outputs: type=image,name=${{ env.DOCKER_IMAGE }},push-by-digest=true
+
+      - name: Record image digest
+        id: digest_step
+        run: echo "digest=${{ steps.build-and-push.outputs.digest }}" || true
+
+      - name: Smoke test container
+        run: |
+          echo "Running container smoke test..."
+          docker run -d --name smoke -p 8081:80 ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
+          sleep 12
+          echo "Container logs (tail):"; docker logs --tail 80 smoke || true
+          echo "Checking APP_KEY presence inside container:"; docker exec smoke grep -E '^APP_KEY=' .env || echo 'APP_KEY missing'
+          echo "Artisan about (non-fatal if fails):"; docker exec smoke php artisan about || true
+          echo "Permissions check:"; docker exec smoke ls -ld storage storage/framework storage/logs bootstrap/cache || true
+          docker rm -f smoke || true
+
+      - name: Save docker debug logs on failure
+        if: failure()
+        run: |
+          echo "Workflow failed; attempting to gather additional diagnostics."
+          docker image ls | head -n 20 || true
+          df -h || true
+          free -m || true
 
       - name: Verify Docker image pushed successfully
         run: |
