@@ -40,7 +40,7 @@ class Menu extends Model
      */
     public function ratings()
     {
-        return $this->hasMany(ItemRating::class, 'menu_item_id', 'item_id');
+        return $this->hasMany(ItemRating::class, 'item_id', 'item_id');
     }
 
     /**

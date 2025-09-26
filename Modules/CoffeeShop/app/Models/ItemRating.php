@@ -14,7 +14,7 @@ class ItemRating extends Model
 
     protected $fillable = [
         'user_id',
-        'menu_item_id',
+        'item_id',
         'rating',
         'review',
     ];
@@ -32,7 +32,7 @@ class ItemRating extends Model
     {
         return [
             'user_id' => 'required|exists:users,id',
-            'menu_item_id' => 'required|exists:menu,item_id',
+            'item_id' => 'required|exists:menu,item_id',
             'rating' => 'required|integer|between:1,5',
             'review' => 'nullable|string|max:1000',
         ];
@@ -51,7 +51,7 @@ class ItemRating extends Model
      */
     public function menuItem()
     {
-        return $this->belongsTo(Menu::class, 'menu_item_id', 'item_id');
+        return $this->belongsTo(Menu::class, 'item_id', 'item_id');
     }
 
     /**

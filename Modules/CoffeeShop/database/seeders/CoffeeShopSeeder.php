@@ -97,7 +97,7 @@ class CoffeeShopSeeder extends Seeder
                     ->fiveStars()
                     ->create([
                         'user_id' => $user->id,
-                        'menu_item_id' => $item->item_id
+                        'item_id' => $item->item_id
                     ]);
                 $ratings = $ratings->merge([$excellentRatings]);
             }
@@ -115,7 +115,7 @@ class CoffeeShopSeeder extends Seeder
                     ->highRating()
                     ->create([
                         'user_id' => $user->id,
-                        'menu_item_id' => $item->item_id
+                        'item_id' => $item->item_id
                     ]);
                 $ratings = $ratings->merge([$highRatings]);
             }
@@ -126,7 +126,7 @@ class CoffeeShopSeeder extends Seeder
                 $mixedRatings = ItemRating::factory()
                     ->create([
                         'user_id' => $user->id,
-                        'menu_item_id' => $item->item_id
+                        'item_id' => $item->item_id
                     ]);
                 $ratings = $ratings->merge([$mixedRatings]);
             }
@@ -140,7 +140,7 @@ class CoffeeShopSeeder extends Seeder
                 $itemRatings = ItemRating::factory()
                     ->create([
                         'user_id' => $user->id,
-                        'menu_item_id' => $item->item_id
+                        'item_id' => $item->item_id
                     ]);
                 $ratings = $ratings->merge([$itemRatings]);
             }
