@@ -40,28 +40,26 @@ COPY . .
 COPY ./public/.htaccess /var/www/html/public/.htaccess
 
 # Create necessary Laravel directories BEFORE composer install
-RUN mkdir -p /var/www/html/storage/framework/{cache,sessions,testing,views} \
-    && mkdir -p /var/www/html/storage/logs \
-    && mkdir -p /var/www/html/bootstrap/cache \
-    && touch /var/www/html/storage/logs/laravel.log \
-    && chown -R www-data:www-data /var/www/html/storage \
-    && chown -R www-data:www-data /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage \
-    && chmod -R 775 /var/www/html/bootstrap/cache
+RUN mkdir -p storage/framework/{cache,sessions,testing,views} \
+    && mkdir -p storage/logs \
+    && mkdir -p bootstrap/cache \
+    && touch storage/logs/laravel.log \
+    && chown -R www-data:www-data storage \
+    && chown -R www-data:www-data bootstrap/cache \
+    && chmod -R 775 storage \
+    && chmod -R 775 bootstrap/cache
 
 # Ensure modules directories exist and have proper permissions
 RUN mkdir -p Modules/{AiModule,Auth,CoffeeShop,FormSubmission} \
     && chown -R www-data:www-data Modules/
 
-# Copy .env.example to .env for package discovery
-RUN php -r "file_exists('.env') || copy('.env.example', '.env');"
+# Copy .env.example to .env and generate a basic app key manually
+RUN cp .env.example .env \
+    && php -r "file_put_contents('.env', str_replace('APP_KEY=', 'APP_KEY=base64:'.base64_encode(random_bytes(32)), file_get_contents('.env')));"
 
 # Install composer dependencies (no dev dependencies for production)
 # Skip scripts to avoid package discovery issues during build
 RUN composer install --no-interaction --optimize-autoloader --no-dev --ignore-platform-reqs --no-scripts
-
-# Generate application key AFTER composer install
-RUN php artisan key:generate --ansi --force
 
 # Run package discovery manually after all directories are ready
 RUN php artisan package:discover --ansi
