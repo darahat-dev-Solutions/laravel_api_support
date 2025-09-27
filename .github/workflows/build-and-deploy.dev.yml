@@ -168,15 +168,49 @@ jobs:
             sed -i "s|DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
-            # Run Docker container, exposing port 80 directly
-            echo "Starting Docker container ...."
+            # Determine host port (prefer env HOST_PORT, fallback to 80)
+            DEFAULT_HOST_PORT=${{ env.HOST_PORT }}
+            if [ -z "$DEFAULT_HOST_PORT" ]; then DEFAULT_HOST_PORT=80; fi
+
+            CHOSEN_PORT=$DEFAULT_HOST_PORT
+
+            # Function to check if a port is free
+            is_port_free() { ! ss -tln | awk '{print $4}' | grep -Eq ":$1$"; }
+
+            echo "Checking if port $CHOSEN_PORT is available..."
+            if ! is_port_free "$CHOSEN_PORT"; then
+              echo "Port $CHOSEN_PORT is in use. Attempting alternatives..."
+              for alt in 8080 8081 8000 8888; do
+                if is_port_free "$alt"; then
+                  CHOSEN_PORT=$alt
+                  echo "Selected alternative port $CHOSEN_PORT"
+                  break
+                fi
+              done
+            fi
+
+            # If still blocked on PORT 80 and user explicitly wants 80, attempt to stop common services (non-fatal)
+            if [ "$CHOSEN_PORT" = "80" ] && ! is_port_free 80; then
+              echo "Port 80 busy; trying to stop host web servers (apache2/nginx)" || true
+              sudo systemctl stop apache2 2>/dev/null || true
+              sudo systemctl stop nginx 2>/dev/null || true
+              sleep 3
+              if ! is_port_free 80; then
+                echo "Port 80 still busy after stop attempts. Switching to 8080 (adjust security group if needed)."
+                CHOSEN_PORT=8080
+              fi
+            fi
+
+            echo "Starting Docker container on host port $CHOSEN_PORT -> container port ${${{ env.CONTAINER_PORT }}}"
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
-              -p 80:${{ env.CONTAINER_PORT }} \
+              -p ${CHOSEN_PORT}:${{ env.CONTAINER_PORT }} \
               --restart unless-stopped \
               -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env:/var/www/html/.env \
               -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage:/var/www/html/storage \
               ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
+
+            echo "Container started. Host URL: http://${{ env.AWS_SERVER_IP }}:${CHOSEN_PORT}"
 
             # Wait for container to start
             echo "Waiting for container to start..."
