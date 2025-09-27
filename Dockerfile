@@ -64,6 +64,9 @@ RUN mkdir -p storage/framework/{cache,sessions,testing,views} \
     && chmod -R 775 storage \
     && chmod -R 775 bootstrap/cache
 
+# Some Laravel versions expect storage/framework/cache/data (file cache store). Create proactively.
+RUN mkdir -p storage/framework/cache/data && chown -R www-data:www-data storage/framework/cache && chmod -R 775 storage/framework/cache
+
 # Permission verification script (fails fast if critical dirs missing or not writable)
 RUN printf '#!/bin/sh\nset -e\nfor d in storage storage/framework storage/logs bootstrap/cache; do\n  if [ ! -d "$d" ]; then echo "[VERIFY] MISSING_DIR:$d"; exit 1; fi;\n  if [ ! -w "$d" ]; then echo "[VERIFY] NOT_WRITABLE:$d"; ls -ld "$d"; exit 1; fi;\n  echo "[VERIFY] OK:$d";\ndone\necho "[VERIFY] Permissions look good."\n' > /usr/local/bin/verify-perms && chmod +x /usr/local/bin/verify-perms
 RUN /usr/local/bin/verify-perms
@@ -90,7 +93,11 @@ RUN if [ "$ENABLE_BUILD_DEBUG" = "1" ]; then echo "[DEBUG] Running composer vali
 RUN if [ "$ENABLE_BUILD_DEBUG" = "1" ]; then echo "[DEBUG] Installed vendor count:"; ls -1 vendor | wc -l; fi
 
 # Run package discovery manually after all directories are ready
-RUN php artisan package:discover --ansi || { echo "[ERROR] package:discover failed"; exit 1; }
+RUN echo "[DEBUG] Verifying directories before package:discover" \
+    && ls -ld storage storage/framework storage/framework/cache storage/framework/cache/data bootstrap/cache || true \
+    && php -r 'echo "Writable check:\n"; $paths=["storage","storage/framework","storage/framework/cache","storage/framework/cache/data","bootstrap/cache"]; foreach($paths as $p){ echo $p.": ".(is_writable($p)?"writable":"NOT_WRITABLE")."\n"; }' \
+    && php artisan package:discover --ansi \
+    || { echo "[WARN] package:discover failed during build (will retry at runtime)"; touch /PACKAGE_DISCOVER_FAILED; }
 RUN if [ "$ENABLE_BUILD_DEBUG" = "1" ]; then echo "[DEBUG] Artisan about output:"; php artisan about || true; fi
 
 # Clear and rebuild Laravel caches for modules (avoid DB-dependent caches)
@@ -104,4 +111,8 @@ RUN a2enmod rewrite headers && if [ "$ENABLE_BUILD_DEBUG" = "1" ]; then apachect
 
 # Expose port 80 and start Apache
 EXPOSE 80
-CMD ["apache2-foreground"]
+
+# Runtime entrypoint wrapper to retry package:discover if it failed at build stage
+RUN printf '#!/bin/sh\nset -e\nif [ -f /PACKAGE_DISCOVER_FAILED ]; then\n  echo "[ENTRYPOINT] Retrying package:discover...";\n  if php artisan package:discover --ansi; then\n     echo "[ENTRYPOINT] package:discover succeeded on retry";\n     rm -f /PACKAGE_DISCOVER_FAILED;\n  else\n     echo "[ENTRYPOINT] package:discover still failing; continuing";\n  fi;\nfi\nexec apache2-foreground\n' > /usr/local/bin/start-app && chmod +x /usr/local/bin/start-app
+
+CMD ["start-app"]
