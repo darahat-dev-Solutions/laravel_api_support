@@ -4,10 +4,7 @@
     "description": "AI Module for managing AI assistants and their prompts",
     "keywords": [],
     "priority": 0,
-    "providers": [
-        "Modules\\AiModule\\Providers\\AiModuleServiceProvider",
-        "Modules\\AiModule\\Providers\\RouteServiceProvider"
-    ],
+    "providers": ["Modules\\AiModule\\Providers\\AiModuleServiceProvider"],
     "aliases": {},
     "files": [],
     "requires": []
