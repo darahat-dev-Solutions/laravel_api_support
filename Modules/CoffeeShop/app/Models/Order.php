@@ -73,6 +73,6 @@ class Order extends Model
      */
     protected static function newFactory()
     {
-        return \Database\Factories\OrderFactory::new();
+        return \Modules\CoffeeShop\Database\Factories\OrderFactory::new();
     }
 }

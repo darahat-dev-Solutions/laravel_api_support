@@ -17,12 +17,14 @@ class OrderItem extends Model
         'order_id',
         'item_id',
         'quantity',
-        'price',
+        'total_price',
+        'unit_price'
     ];
 
     protected $casts = [
         'quantity' => 'integer',
-        'price' => 'decimal:2',
+        'total_price' => 'decimal:2',
+        'unit_price' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -48,7 +50,7 @@ class OrderItem extends Model
      */
     public function getSubtotalAttribute()
     {
-        return $this->price * $this->quantity;
+        return $this->unit_price * $this->quantity;
     }
 
     /**
@@ -61,19 +63,19 @@ class OrderItem extends Model
         // Auto-update order total when order items are created/updated/deleted
         static::created(function ($orderItem) {
             $orderItem->order->update([
-                'total_price' => $orderItem->order->orderItems()->sum(DB::raw('price * quantity'))
+                'total_price' => $orderItem->order->orderItems()->sum(DB::raw('unit_price * quantity'))
             ]);
         });
 
         static::updated(function ($orderItem) {
             $orderItem->order->update([
-                'total_price' => $orderItem->order->orderItems()->sum(DB::raw('price * quantity'))
+                'total_price' => $orderItem->order->orderItems()->sum(DB::raw('unit_price * quantity'))
             ]);
         });
 
         static::deleted(function ($orderItem) {
             $orderItem->order->update([
-                'total_price' => $orderItem->order->orderItems()->sum(DB::raw('price * quantity'))
+                'total_price' => $orderItem->order->orderItems()->sum(DB::raw('unit_price * quantity'))
             ]);
         });
     }
@@ -83,6 +85,7 @@ class OrderItem extends Model
      */
     protected static function newFactory()
     {
-        return \Database\Factories\OrderItemFactory::new();
+        return \Modules\CoffeeShop\Database\Factories\OrderItemFactory::new();
+
     }
 }

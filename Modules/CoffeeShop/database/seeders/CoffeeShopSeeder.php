@@ -77,7 +77,7 @@ class CoffeeShopSeeder extends Seeder
 
         // Update order totals based on order items
         foreach ($orders as $order) {
-            $total = $order->orderItems()->sum(DB::raw('price * quantity'));
+            $total = $order->orderItems()->sum(DB::raw('unit_price * quantity'));
             $order->update(['total_price' => $total]);
         }
 

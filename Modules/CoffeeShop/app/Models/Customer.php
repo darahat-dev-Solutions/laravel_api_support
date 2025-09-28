@@ -39,6 +39,6 @@ class Customer extends Model
      */
     protected static function newFactory()
     {
-        return \Database\Factories\CustomerFactory::new();
+        return \Modules\CoffeeShop\Database\Factories\CustomerFactory::new();
     }
 }

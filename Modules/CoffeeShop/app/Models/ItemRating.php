@@ -71,11 +71,11 @@ class ItemRating extends Model
     }
 
     /**
-     * Scope to get recent ratings.
+     * Scope to get recent ratings (last 30 days by default)
      */
     public function scopeRecent($query, $days = 30)
     {
-        return $query->where('created_at', '>=', now()->subDays($days));
+        return $query->where('created_at', '>=', now()->subDays((int)$days));
     }
 
     /**
@@ -91,6 +91,6 @@ class ItemRating extends Model
      */
     protected static function newFactory()
     {
-        return \Database\Factories\ItemRatingFactory::new();
+        return \Modules\CoffeeShop\Database\Factories\ItemRatingFactory::new();
     }
 }
