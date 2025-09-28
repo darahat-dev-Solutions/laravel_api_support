@@ -15,29 +15,36 @@ class CoffeeShopController extends Controller
     /**
      * Display dashboard statistics.
      */
-    public function dashboard(): JsonResponse
+       public function dashboard(): JsonResponse
     {
-        $stats = [
-            'total_customers' => Customer::count(),
-            'total_menu_items' => MenuItem::count(),
-            'available_menu_items' => MenuItem::where('is_available', true)->count(),
-            'total_orders' => Order::count(),
-            'pending_orders' => Order::where('status', 'pending')->count(),
-            'preparing_orders' => Order::where('status', 'preparing')->count(),
-            'ready_orders' => Order::where('status', 'ready')->count(),
-            'completed_orders' => Order::where('status', 'completed')->count(),
-            'cancelled_orders' => Order::where('status', 'cancelled')->count(),
-            'total_revenue' => Order::whereIn('status', ['completed'])->sum('total_price'),
-        ];
+        try {
+            $stats = [
+                'total_customers' => Customer::count(),
+                'total_menu_items' => MenuItem::count(),
+                'total_orders' => Order::count(),
+                'pending_orders' => Order::where('status', 'pending')->count(),
+                'completed_orders' => Order::where('status', 'completed')->count(),
+            ];
 
-        return response()->json($stats);
+            return response()->json([
+                'success' => true,
+                'data' => $stats,
+                'message' => 'Dashboard data retrieved successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load dashboard data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
 
     /**
      * Get recent orders.
      */
-      public function recentOrders(): JsonResponse
+     public function recentOrders(): JsonResponse
     {
         try {
             $recentOrders = Order::with('customer')
@@ -48,7 +55,8 @@ class CoffeeShopController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $recentOrders,
-                'message' => 'Recent orders retrieved successfully'
+                'message' => 'Recent orders retrieved successfully',
+                'count' => $recentOrders->count()
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -131,16 +139,16 @@ class CoffeeShopController extends Controller
 
     public function popularItems(): JsonResponse
     {
-        try{
-            /// If we dont have order_items table yet, return
-            $popularItems = MenuItem:: where('is_available', true)->take(5)->get([
-                'item_id', 'item_name', 'description', 'price', 'image_url'
-            ]);
+        try {
+            $popularItems = MenuItem::where('is_available', true)
+                ->take(5)
+                ->get(['item_id', 'item_name', 'description', 'price', 'image_url']);
 
             return response()->json([
                 'success' => true,
                 'data' => $popularItems,
-                'message' => 'Popular items retrived successfuly'
+                'message' => 'Popular items retrieved successfully',
+                'count' => $popularItems->count()
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -148,6 +156,6 @@ class CoffeeShopController extends Controller
                 'message' => 'Failed to retrieve popular items',
                 'error' => $e->getMessage()
             ], 500);
+        }
     }
-}
 }
