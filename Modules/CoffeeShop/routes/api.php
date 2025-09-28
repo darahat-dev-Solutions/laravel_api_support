@@ -6,6 +6,16 @@ use Modules\CoffeeShop\Http\Controllers\MenuItemController;
 use Modules\CoffeeShop\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
+
+// Simple test route
+Route::get('test', function () {
+    return response()->json([
+        'success' => true,
+        'message' => 'CoffeeShop module API is working!',
+        'timestamp' => now()
+    ]);
+});
+
 // Dashboard and statistics
 Route::get('coffee-shop/dashboard', [CoffeeShopController::class, 'dashboard']);
 Route::get('coffee-shop/recent-orders', [CoffeeShopController::class, 'recentOrders']);
