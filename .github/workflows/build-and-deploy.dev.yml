@@ -9,7 +9,7 @@ env:
   DOCKER_TAG: latest
   CONTAINER_PORT: 80
   HOST_PORT: 8080
-  AWS_SERVER_IP: 54.169.119.235
+  AWS_SERVER_IP: ${{ secrets.AWS_EC2_HOST }}
   DOCKER_BUILD_DEBUG: 1 # Toggle to 0 to disable verbose build diagnostics
 
 jobs:
@@ -174,6 +174,7 @@ jobs:
             sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
             # Run container on fixed port 80
+                        # Run container on fixed port 80
             echo "Starting Docker container on port 80..."
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
@@ -185,9 +186,24 @@ jobs:
 
             echo "Container started. Host URL: http://${{ env.AWS_SERVER_IP }}"
 
-            # Fix storage permissions
-            echo "Fixing storage permissions..."
-            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+            # Wait for container to initialize
+            sleep 10
+
+            # Ensure Laravel directories exist
+            echo "Creating required Laravel directories inside container..."
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" bash -c "
+              mkdir -p bootstrap/cache &&
+              mkdir -p storage/framework/{cache,sessions,views} storage/logs &&
+              chown -R www-data:www-data storage bootstrap/cache &&
+              chmod -R 775 storage bootstrap/cache storage/framework storage/logs
+            "
+
+            # Clear Laravel caches safely
+            echo "Clearing Laravel caches..."
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan config:clear || true
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan route:clear || true
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan view:clear || true
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan cache:clear || true
 
             echo "--- Docker Container Logs ---"
             sudo docker logs "${{ secrets.REPOSITORY_NAME }}"
