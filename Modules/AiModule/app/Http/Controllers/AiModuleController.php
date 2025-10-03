@@ -13,7 +13,14 @@ class AiModuleController extends Controller
      */
     public function index()
     {
-        return AiModule::select('id','name','prompt','description','tools')->get();
+        $modules = AiModule::select('id','name','prompt','description','tools')->get();
+
+        /// Decode tools for each module
+        $modules->transform(function ($module){
+            $module->tools = json_decode($module->tools, true);
+            return $module;
+        });
+        return $modules;
     }
 
     /**
