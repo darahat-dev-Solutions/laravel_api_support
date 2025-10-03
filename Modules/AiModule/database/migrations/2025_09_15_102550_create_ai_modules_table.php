@@ -11,14 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ai_modules', function (Blueprint $table) {
+       Schema::create('ai_modules', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->text('description');
             $table->text('prompt');
-            $table->dateTime('created_at');
-            $table->dateTime('updated_at');
+            $table->json('tools')->nullable(); // <-- new field for tool definitions
+            $table->timestamps(); // shorter version of created_at + updated_at
         });
+
     }
 
     /**

@@ -23,12 +23,24 @@ class AiModuleFactory extends Factory
      *
      * @return array<string, mixed>
      */
-    public function definition(): array
+   public function definition(): array
     {
         return [
             'name' => Str::uuid(),
             'description' => 'AI will act like a Senior Smart Contract Developer',
             'prompt' => 'You are a blockchain smart contract engineer. Write secure, gas-optimized contracts using Solidity and best practices.',
+            'tools' => json_encode([
+                [
+                    'tool_name' => 'compile_contract',
+                    'keywords' => ['compile','check','solidity','syntax'],
+                    'response_prompt' => 'Compile the provided Solidity contract and return errors if any.'
+                ],
+                [
+                    'tool_name' => 'estimate_gas',
+                    'keywords' => ['gas','estimate','fees','optimize'],
+                    'response_prompt' => 'Estimate gas usage and suggest optimizations.'
+                ]
+            ]),
             'created_at' => now(),
             'updated_at' => now(),
         ];
