@@ -15,7 +15,7 @@ class AiModuleController extends Controller
     {
         $modules = AiModule::select('id','name','prompt','description','tools')->get();
 
-        /// Decode tools for each module
+        /// Decode tools for each module(need to tool make a real json array of object)
         $modules->transform(function ($module){
             $module->tools = json_decode($module->tools, true);
             return $module;
