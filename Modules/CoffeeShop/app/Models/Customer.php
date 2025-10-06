@@ -12,7 +12,7 @@ class Customer extends Model
     use HasFactory;
 
     protected $table = 'customers';
-    protected $primaryKey = 'customers_id';
+    protected $primaryKey = 'customer_id';
 
     protected $fillable = [
         'name',
@@ -31,7 +31,7 @@ class Customer extends Model
      */
     public function orders(): HasMany
     {
-        return $this->hasMany(Order::class, 'customer_id', 'customers_id');
+        return $this->hasMany(Order::class, 'customer_id', 'customer_id');
     }
 
     /**

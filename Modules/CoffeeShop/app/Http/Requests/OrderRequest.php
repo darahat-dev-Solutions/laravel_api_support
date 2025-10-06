@@ -22,7 +22,7 @@ class OrderRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'customer_id' => 'sometimes|required|exists:customers,customers_id',
+            'customer_id' => 'sometimes|required|exists:customers,customer_id',
             'order_time' => 'sometimes|date',
             'total_price' => 'sometimes|nullable|numeric|min:0',
             'status' => 'sometimes|in:pending,preparing,ready,completed,cancelled',
@@ -36,7 +36,7 @@ class OrderRequest extends FormRequest
 
         if ($this->isMethod('post')) {
             // Creating new order - customer_id is required
-            $rules['customer_id'] = 'required|exists:customers,customers_id';
+            $rules['customer_id'] = 'required|exists:customers,customer_id';
             $rules['items'] = 'required|array|min:1';
         }
 

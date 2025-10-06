@@ -3,6 +3,7 @@
 namespace Modules\CoffeeShop\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Modules\CoffeeShop\Models\Customer;
 use Modules\CoffeeShop\Models\MenuItem;
 use Modules\CoffeeShop\Models\Order;
@@ -232,19 +233,29 @@ class CoffeeShopApiTest extends TestCase
 
     public function test_create_order()
     {
-        $customer = Customer::factory()->create();
+        // Create customer using the model to ensure proper primary key handling
+        $customer = \Modules\CoffeeShop\Models\Customer::factory()->create();
+        // Debug: Let's see what ID was assigned
+        //dump("Customer ID: " . $customer->customer_id);
+
         $menuItem1 = MenuItem::factory()->create(['price' => 5.00]);
         $menuItem2 = MenuItem::factory()->create(['price' => 3.50]);
 
         $orderData = [
-            'customer_id' => $customer->customer_id,
+            'customer_id' => $customer->customer_id, // Use the actual model's primary key
             'items' => [
                 ['item_id' => $menuItem1->item_id, 'quantity' => 2],
                 ['item_id' => $menuItem2->item_id, 'quantity' => 1],
             ],
         ];
 
-        $response = $this->postJson('/api/coffee-shop/orders', $orderData);
+        // dump("Order data:", $orderData);
+
+        $response = $this->postJson('/api/v1/coffee-shop/orders', $orderData);
+
+        // if ($response->getStatusCode() !== 201) {
+        //     dump("Response:", $response->getContent());
+        // }
 
         $response->assertStatus(201)
             ->assertJsonFragment(['customer_id' => $customer->customer_id]);
@@ -258,7 +269,7 @@ class CoffeeShopApiTest extends TestCase
     {
         $order = Order::factory()->create();
 
-        $response = $this->get('/api/coffee-shop/orders/' . $order->order_.id);
+        $response = $this->get('/api/coffee-shop/orders/' . $order->order_id);
 
         $response->assertStatus(200)
             ->assertJsonFragment(['order_id' => $order->order_id]);

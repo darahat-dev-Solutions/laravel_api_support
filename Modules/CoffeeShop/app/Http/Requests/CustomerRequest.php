@@ -42,7 +42,7 @@ class CustomerRequest extends FormRequest
             // Updating customer - email should be unique except for current customer
             $customerId = $this->route('customer') ?? $this->route('coffeeshop');
             if ($this->filled('email')) {
-                $rules['email'] = 'nullable|email|max:255|unique:customers,email,' . $customerId . ',customers_id';
+                $rules['email'] = 'nullable|email|max:255|unique:customers,email,' . $customerId . ',customer_id';
             }
         }
 
