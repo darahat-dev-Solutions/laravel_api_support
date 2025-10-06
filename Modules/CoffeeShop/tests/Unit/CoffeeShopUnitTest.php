@@ -28,16 +28,19 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertTrue($response->getData()->success);
     }
+    // Failed
+public function test_coffeeshop_controller_recent_orders()
+{
+    $this->withoutExceptionHandling(); // <- add this
 
-    public function test_coffeeshop_controller_recent_orders()
-    {
-        Order::factory()->count(5)->create();
-        $controller = new CoffeeShopController();
-        $response = $controller->recentOrders();
-        $this->assertInstanceOf(JsonResponse::class, $response);
-        $this->assertTrue($response->getData()->success);
-        $this->assertCount(5, $response->getData()->data);
-    }
+    Order::factory()->count(5)->create();
+
+    $response = $this->getJson('/api/v1/coffee-shop/recent-orders');
+ $response->dump();
+    $response->assertOk()
+             ->assertJson(['success' => true, 'message' => 'Recent orders retrieved successfully'])
+             ->assertJsonCount(5, 'data');
+}
 
     public function test_coffeeshop_controller_popular_items()
     {
@@ -57,7 +60,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertCount(3, $response->getData());
     }
-
+    // Failed
     public function test_customer_controller_store()
     {
         $request = new CustomerRequest();
@@ -81,7 +84,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals($customer->name, $response->getData()->name);
     }
-
+    // Failed
     public function test_customer_controller_update()
     {
         $customer = Customer::factory()->create();
@@ -106,7 +109,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals(204, $response->getStatusCode());
     }
-
+// Failed
     public function test_menuitem_controller_index()
     {
         MenuItem::factory()->count(3)->create();
@@ -125,7 +128,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertCount(1, $response->getData());
     }
-
+    // Failed
     public function test_menuitem_controller_store()
     {
         $request = new MenuItemRequest();
@@ -141,7 +144,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals('Test Item', $response->getData()->item_name);
     }
-
+// Failed
     public function test_menuitem_controller_show()
     {
         $menuItem = MenuItem::factory()->create();
@@ -150,7 +153,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals($menuItem->item_name, $response->getData()->item_name);
     }
-
+    // Failed
     public function test_menuitem_controller_update()
     {
         $menuItem = MenuItem::factory()->create();
@@ -176,7 +179,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals(204, $response->getStatusCode());
     }
-
+// Failed
     public function test_order_controller_index()
     {
         Order::factory()->count(3)->create();
@@ -185,7 +188,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertCount(3, $response->getData());
     }
-
+    // Failed
     public function test_order_controller_store()
     {
         $customer = Customer::factory()->create();
@@ -204,7 +207,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals($customer->customer_id, $response->getData()->customer_id);
     }
-
+// Failed
     public function test_order_controller_show()
     {
         $order = Order::factory()->create();
@@ -213,7 +216,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals($order->order_id, $response->getData()->order_id);
     }
-
+    // Failed
     public function test_order_controller_update()
     {
         $order = Order::factory()->create();
@@ -236,7 +239,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals(204, $response->getStatusCode());
     }
-
+// Failed
     public function test_order_controller_by_status()
     {
         Order::factory()->create(['status' => 'pending']);
@@ -246,7 +249,7 @@ class CoffeeShopUnitTest extends TestCase
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertCount(1, $response->getData());
     }
-
+// Failed
     public function test_order_controller_by_customer()
     {
         $customer = Customer::factory()->create();

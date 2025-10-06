@@ -23,16 +23,7 @@ class CoffeeShopApiTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_get_test_route()
-    {
-        $response = $this->get('/api/coffee-shop/test');
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'message' => 'CoffeeShop module API is working!',
-            ]);
-    }
 
     public function test_get_dashboard()
     {
@@ -41,7 +32,7 @@ class CoffeeShopApiTest extends TestCase
         Order::factory()->count(3)->create(['status' => 'pending']);
         Order::factory()->count(2)->create(['status' => 'completed']);
 
-        $response = $this->get('/api/coffee-shop/dashboard');
+        $response = $this->get('/api/v1/coffee-shop/dashboard');
 
         $response->assertStatus(200)
             ->assertJson([
@@ -65,7 +56,7 @@ class CoffeeShopApiTest extends TestCase
     {
         Order::factory()->count(15)->create();
 
-        $response = $this->get('/api/coffee-shop/recent-orders');
+        $response = $this->get('/api/v1/coffee-shop/recent-orders');
 
         $response->assertStatus(200)
             ->assertJson([
