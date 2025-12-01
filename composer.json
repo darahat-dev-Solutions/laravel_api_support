@@ -13,7 +13,8 @@
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10.1",
-        "nwidart/laravel-modules": "*"
+        "nwidart/laravel-modules": "*",
+        "stripe/stripe-php": "^19.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24",
@@ -40,7 +41,10 @@
             "Modules\\CoffeeShop\\Database\\Seeders\\": "Modules/CoffeeShop/database/seeders/",
             "Modules\\FormSubmission\\": "Modules/FormSubmission/app/",
             "Modules\\FormSubmission\\Database\\Factories\\": "Modules/FormSubmission/database/factories/",
-            "Modules\\FormSubmission\\Database\\Seeders\\": "Modules/FormSubmission/database/seeders/"
+            "Modules\\FormSubmission\\Database\\Seeders\\": "Modules/FormSubmission/database/seeders/",
+            "Modules\\Payment\\": "Modules/Payment/app/",
+            "Modules\\Payment\\Database\\Factories\\": "Modules/Payment/database/factories/",
+            "Modules\\Payment\\Database\\Seeders\\": "Modules/Payment/database/seeders/"
         }
     },
     "autoload-dev": {

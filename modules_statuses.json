@@ -2,5 +2,6 @@
     "CoffeeShop": true,
     "AiModule": true,
     "Auth": true,
-    "FormSubmission": true
+    "FormSubmission": true,
+    "Payment": true
 }
