@@ -25,4 +25,16 @@ return [
 
     'default_currency' => env('PAYMENT_DEFAULT_CURRENCY', 'usd'),
     'supported_currencies' => ['usd', 'eur', 'gbp', 'cad', 'aud', 'jpy'],
+
+
+      /*
+    |--------------------------------------------------------------------------
+    | Stripe Keys
+    |--------------------------------------------------------------------------
+    */
+
+    'stripe' => [
+        'secret' => env('STRIPE_SECRET_KEY'),
+        'public' => env('STRIPE_PUBLIC_KEY'),
+    ],
 ];

@@ -27,6 +27,9 @@ class PaymentServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+        $this->publishes([
+        __DIR__.'../../config/config.php' => config_path('payment.php'),
+    ], 'config');
     }
 
     /**
@@ -36,6 +39,15 @@ class PaymentServiceProvider extends ServiceProvider
     {
         $this->app->register(EventServiceProvider::class);
         $this->app->register(RouteServiceProvider::class);
+ $path = __DIR__ . '/../Config/config.php';
+    // fallback to lowercase dir if present
+    if (! file_exists($path)) {
+        $path = __DIR__ . '/../config/config.php';
+    }
+
+    if (file_exists($path)) {
+        $this->mergeConfigFrom($path, 'payment');
+    }
     }
 
     /**
