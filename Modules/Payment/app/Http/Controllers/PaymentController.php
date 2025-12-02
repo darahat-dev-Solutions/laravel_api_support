@@ -15,7 +15,7 @@ class PaymentController extends Controller
     public function __construct()
     {
         // Set Stripe API key
-        Stripe::setApiKey(config('payment.stripe.secret'));
+        Stripe::setApiKey(config('payment.stripe_secret_key'));
     }
 
     /**
