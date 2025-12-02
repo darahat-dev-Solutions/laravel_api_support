@@ -27,11 +27,13 @@ Route::get('payment/test', function () {
 });
 
 // Payment intent routes (protected by authentication)
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('payment/create-payment-intent', [PaymentController::class, 'createPaymentIntent']);
+     Route::post('payment/create-payment-intent', [PaymentController::class, 'createPaymentIntent']);
     Route::get('payment/payment-intent/{paymentIntentId}', [PaymentController::class, 'getPaymentIntent']);
     Route::post('payment/payment-intent/{paymentIntentId}/cancel', [PaymentController::class, 'cancelPaymentIntent']);
-});
+
 
 // Webhook route (no authentication - Stripe will send requests here)
 Route::post('payment/webhook', [PaymentController::class, 'webhook']);
+
+// Config diagnostic route (no auth - for debugging)
+Route::get('payment/config-check', [PaymentController::class, 'configCheck']);

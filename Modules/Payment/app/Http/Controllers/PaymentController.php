@@ -239,4 +239,31 @@ class PaymentController extends Controller
             return response()->json(['error' => 'Webhook error'], 500);
         }
     }
+
+    /**
+     * Check configuration status (for debugging)
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function configCheck()
+    {
+        $secretKey = config('payment.stripe_secret_key');
+        $publishableKey = config('payment.stripe_publishable_key');
+        
+        return response()->json([
+            'module' => 'Payment',
+            'config_loaded' => config('payment.name') !== null,
+            'stripe_secret_configured' => !empty($secretKey),
+            'stripe_secret_prefix' => !empty($secretKey) ? substr($secretKey, 0, 7) . '...' : 'NOT SET',
+            'stripe_publishable_configured' => !empty($publishableKey),
+            'stripe_publishable_prefix' => !empty($publishableKey) ? substr($publishableKey, 0, 7) . '...' : 'NOT SET',
+            'webhook_secret_configured' => !empty(config('payment.stripe_webhook_secret')),
+            'default_currency' => config('payment.default_currency'),
+            'supported_currencies' => config('payment.supported_currencies'),
+            'env_check' => [
+                'STRIPE_SECRET_KEY' => env('STRIPE_SECRET_KEY') ? 'SET' : 'NOT SET',
+                'STRIPE_PUBLISHABLE_KEY' => env('STRIPE_PUBLISHABLE_KEY') ? 'SET' : 'NOT SET',
+            ]
+        ]);
+    }
 }
