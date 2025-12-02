@@ -249,7 +249,7 @@ class PaymentController extends Controller
     {
         $secretKey = config('payment.stripe_secret_key');
         $publishableKey = config('payment.stripe_publishable_key');
-        
+
         return response()->json([
             'module' => 'Payment',
             'config_loaded' => config('payment.name') !== null,
