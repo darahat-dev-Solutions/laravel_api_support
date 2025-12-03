@@ -185,11 +185,11 @@ jobs:
 
             PUB_RAW="${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
             if [ -z "$PUB_RAW" ]; then
-              # Backward compatibility: allow STRIPE_PUBLIC_KEY secret name
-              PUB_RAW="${{ secrets.STRIPE_PUBLIC_KEY }}"
+              # Backward compatibility: allow STRIPE_PUBLISHABLE_KEY secret name
+              PUB_RAW="${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
             fi
             PUB_VALUE="${PUB_RAW#STRIPE_PUBLISHABLE_KEY=}"
-            PUB_VALUE="${PUB_VALUE#STRIPE_PUBLIC_KEY=}"
+            PUB_VALUE="${PUB_VALUE#STRIPE_PUBLISHABLE_KEY=}"
             PUB_VALUE=$(echo "$PUB_VALUE" | tr -d '\r' | xargs)
 
             # Write STRIPE_SECRET_KEY
@@ -199,7 +199,7 @@ jobs:
               echo "STRIPE_SECRET_KEY=$SEC_VALUE" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             fi
 
-            # Write STRIPE_PUBLISHABLE_KEY (not STRIPE_PUBLIC_KEY)
+            # Write STRIPE_PUBLISHABLE_KEY (not STRIPE_PUBLISHABLE_KEY)
             if grep -q "^STRIPE_PUBLISHABLE_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
               sed -i "s|^STRIPE_PUBLISHABLE_KEY=.*|STRIPE_PUBLISHABLE_KEY=$PUB_VALUE|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             else
