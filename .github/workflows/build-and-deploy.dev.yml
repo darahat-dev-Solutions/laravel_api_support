@@ -172,8 +172,13 @@ jobs:
             sed -i "s|DB_HOST=.*|DB_HOST=172.17.0.1|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             sed -i "s|DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-            sed -i "s|STRIPE_SECRET_KEY=.*|STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-            sed -i "s|STRIPE_PUBLIC_KEY=.*|STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            # Add Stripe keys if not already present
+            grep -q "^STRIPE_SECRET_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env || \
+              echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+
+            grep -q "^STRIPE_PUBLIC_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env || \
+              echo "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+
 
             # Run container on fixed port 80
                         # Run container on fixed port 80
