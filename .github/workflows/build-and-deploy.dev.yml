@@ -159,7 +159,7 @@ jobs:
             echo "Pulling latest Docker image..."
             sudo docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
-            # Setup environment directory
+                        # Setup environment directory
             echo "Setting up environment..."
             sudo mkdir -p /tmp/"${{ secrets.REPOSITORY_NAME }}"
             sudo chown -R $USER:$USER /tmp/"${{ secrets.REPOSITORY_NAME }}"
@@ -172,18 +172,20 @@ jobs:
             sed -i "s|DB_HOST=.*|DB_HOST=host.docker.internal|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             sed -i "s|DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+
             # Add Stripe keys if not already present
             # Replace if exists, otherwise append
+
+            # Stripe secret key
             if grep -q "^STRIPE_SECRET_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
               sed -i "s|^STRIPE_SECRET_KEY=.*|STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             else
               echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             fi
 
-            if grep -q "^STRIPE_PUBLIC_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env \
-            && sed -i "s|^STRIPE_PUBLIC_KEY=.*|STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env \
-            || echo "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-
+            # Stripe public key - CORRECTED VERSION
+            if grep -q "^STRIPE_PUBLIC_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
+              sed -i "s|^STRIPE_PUBLIC_KEY=.*|STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             else
               echo "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             fi
