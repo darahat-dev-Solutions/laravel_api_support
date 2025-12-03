@@ -14,8 +14,32 @@ class PaymentController extends Controller
 {
     public function __construct()
     {
-        // Set Stripe API key
-        Stripe::setApiKey(config('payment.stripe_secret_key'));
+        // Resolve and set Stripe API key from multiple sources
+        $key = $this->resolveStripeSecret();
+        if (!empty($key)) {
+            Stripe::setApiKey($key);
+        }
+    }
+
+    private function resolveStripeSecret(): ?string
+    {
+        // Try module flat config first
+        $candidates = [
+            config('payment.stripe_secret_key'),
+            // Try nested module config
+            config('payment.stripe.secret'),
+            // Direct env fallback
+            env('STRIPE_SECRET_KEY'),
+            // Common alternative locations
+            config('services.stripe.secret'),
+        ];
+
+        foreach ($candidates as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+        return null;
     }
 
     /**

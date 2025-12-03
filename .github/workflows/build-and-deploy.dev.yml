@@ -162,18 +162,19 @@ jobs:
             sudo chown -R $USER:$USER /tmp/"${{ secrets.REPOSITORY_NAME }}"
             mkdir -p /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/framework/{cache,sessions,views} /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/logs
             echo "${{ secrets.DOT_ENV }}" > /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            # Ensure .env is readable by the container's www-data (UID 33)
+            chmod 644 /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
             # Update .env (app url)
             sed -i "s|^APP_URL=.*|APP_URL=http://${{ env.AWS_SERVER_IP }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
             # Database connection
-            # Prefer an explicit DB_HOST secret when provided; otherwise use Linux Docker bridge gateway
+            # Prefer an explicit DB_HOST secret when provided; otherwise default to localhost (container-local MySQL)
             if [ -n "${{ secrets.DB_HOST }}" ]; then
               sed -i "s|^DB_HOST=.*|DB_HOST=${{ secrets.DB_HOST }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             else
-              # host.docker.internal is unreliable on Linux; default to bridge gateway 172.17.0.1
+              # Default to localhost; change to 172.17.0.1 or host.docker.internal if DB runs on EC2 host
               sed -i "s|^DB_HOST=.*|DB_HOST=127.0.0.1|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-
             fi
             sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
@@ -212,18 +213,20 @@ jobs:
               --name "${{ secrets.REPOSITORY_NAME }}" \
               -p 80:${{ env.CONTAINER_PORT }} \
               --restart unless-stopped \
-              -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env:/var/www/html/.env \
+              --add-host=host.docker.internal:host-gateway \
+              -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env:/var/www/html/.env:ro \
               -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage:/var/www/html/storage \
               ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
             sleep 10
 
-            # Fix permissions
+            # Fix permissions inside container
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" bash -c "
               mkdir -p bootstrap/cache &&
               mkdir -p storage/framework/{cache,sessions,views} storage/logs &&
               chown -R www-data:www-data storage bootstrap/cache &&
-              chmod -R 775 storage bootstrap/cache storage/framework storage/logs
+              chmod -R 775 storage bootstrap/cache storage/framework storage/logs &&
+              chmod 644 /var/www/html/.env || true
             "
 
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan optimize:clear || true
