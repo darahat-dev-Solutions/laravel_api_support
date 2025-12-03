@@ -172,7 +172,8 @@ jobs:
               sed -i "s|^DB_HOST=.*|DB_HOST=${{ secrets.DB_HOST }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             else
               # host.docker.internal is unreliable on Linux; default to bridge gateway 172.17.0.1
-              sed -i "s|^DB_HOST=.*|DB_HOST=172.17.0.1|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+              sed -i "s|^DB_HOST=.*|DB_HOST=127.0.0.1|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+
             fi
             sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
