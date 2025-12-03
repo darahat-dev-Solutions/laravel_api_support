@@ -234,6 +234,17 @@ jobs:
             echo "--- Docker Container Logs ---"
             sudo docker logs "${{ secrets.REPOSITORY_NAME }}"
 
+            echo "--- .env presence and key lines (masked) ---"
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" bash -lc '
+              ls -l /var/www/html/.env || true;
+              if [ -f /var/www/html/.env ]; then
+                egrep -n "^(APP_ENV|APP_URL|DB_HOST|STRIPE_SECRET_KEY|STRIPE_PUBLISHABLE_KEY|STRIPE_PUBLIC_KEY)=" /var/www/html/.env | \
+                  sed -E "s/(STRIPE_(SECRET|PUBLISHABLE|PUBLIC)_KEY)=(.*)/\1=***masked***/" || true;
+              fi'
+
+            echo "--- Payment module config-check ---"
+            curl -s http://${{ env.AWS_SERVER_IP }}/api/v1/payment/config-check || true
+
       - name: Verify Deployment
         run: |
           echo "Testing final deployment from workflow..."
