@@ -163,23 +163,47 @@ jobs:
             mkdir -p /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/framework/{cache,sessions,views} /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/logs
             echo "${{ secrets.DOT_ENV }}" > /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
-            # Update .env
-            sed -i "s|APP_URL=.*|APP_URL=http://${{ env.AWS_SERVER_IP }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-            sed -i "s|DB_HOST=.*|DB_HOST=host.docker.internal|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-            sed -i "s|DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-            sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            # Update .env (app url)
+            sed -i "s|^APP_URL=.*|APP_URL=http://${{ env.AWS_SERVER_IP }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
-            # Stripe keys
-            if grep -q "^STRIPE_SECRET_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
-              sed -i "s|^STRIPE_SECRET_KEY=.*|STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            # Database connection
+            # Prefer an explicit DB_HOST secret when provided; otherwise use Linux Docker bridge gateway
+            if [ -n "${{ secrets.DB_HOST }}" ]; then
+              sed -i "s|^DB_HOST=.*|DB_HOST=${{ secrets.DB_HOST }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             else
-              echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+              # host.docker.internal is unreliable on Linux; default to bridge gateway 172.17.0.1
+              sed -i "s|^DB_HOST=.*|DB_HOST=172.17.0.1|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            fi
+            sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+
+            # --- Stripe keys (sanitize and write) ---
+            # Some users accidentally store secrets as "KEY=VALUE"; strip any leading KEY= from the secret values
+            SEC_RAW="${{ secrets.STRIPE_SECRET_KEY }}"
+            SEC_VALUE="${SEC_RAW#STRIPE_SECRET_KEY=}"
+            SEC_VALUE=$(echo "$SEC_VALUE" | tr -d '\r' | xargs)
+
+            PUB_RAW="${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
+            if [ -z "$PUB_RAW" ]; then
+              # Backward compatibility: allow STRIPE_PUBLIC_KEY secret name
+              PUB_RAW="${{ secrets.STRIPE_PUBLIC_KEY }}"
+            fi
+            PUB_VALUE="${PUB_RAW#STRIPE_PUBLISHABLE_KEY=}"
+            PUB_VALUE="${PUB_VALUE#STRIPE_PUBLIC_KEY=}"
+            PUB_VALUE=$(echo "$PUB_VALUE" | tr -d '\r' | xargs)
+
+            # Write STRIPE_SECRET_KEY
+            if grep -q "^STRIPE_SECRET_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
+              sed -i "s|^STRIPE_SECRET_KEY=.*|STRIPE_SECRET_KEY=$SEC_VALUE|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            else
+              echo "STRIPE_SECRET_KEY=$SEC_VALUE" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             fi
 
-            if grep -q "^STRIPE_PUBLIC_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
-              sed -i "s|^STRIPE_PUBLIC_KEY=.*|STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            # Write STRIPE_PUBLISHABLE_KEY (not STRIPE_PUBLIC_KEY)
+            if grep -q "^STRIPE_PUBLISHABLE_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
+              sed -i "s|^STRIPE_PUBLISHABLE_KEY=.*|STRIPE_PUBLISHABLE_KEY=$PUB_VALUE|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             else
-              echo "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+              echo "STRIPE_PUBLISHABLE_KEY=$PUB_VALUE" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             fi
 
             # Start container on port 80
