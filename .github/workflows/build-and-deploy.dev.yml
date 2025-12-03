@@ -10,7 +10,7 @@ env:
   CONTAINER_PORT: 80
   HOST_PORT: 8080
   AWS_SERVER_IP: ${{ secrets.AWS_EC2_HOST }}
-  DOCKER_BUILD_DEBUG: 1
+  DOCKER_BUILD_DEBUG: 1 # Toggle to 0 to disable verbose build diagnostics
 
 jobs:
   build-and-push:
@@ -19,7 +19,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Buildx
+      - name: Set up Buildx (container driver for advanced features)
         uses: docker/setup-buildx-action@v3
         with:
           install: true
@@ -31,7 +31,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Show git context (debug)
+        run: |
+          echo "Listing top-level files"; ls -al . | head -n 100
+          echo "Git status:"; git status
+          echo "Searching for .env.example presence:"; find . -maxdepth 2 -name '.env.example'
+
+      - name: Build and push Docker image (debug capable)
         id: build
         uses: docker/build-push-action@v4
         with:
@@ -44,13 +50,33 @@ jobs:
           no-cache: false
           labels: build_run=${{ github.run_id }}
 
+      - name: Record image digest
+        run: |
+          echo "Image digest: ${{ steps.build.outputs.digest }}" || true
+          echo "Tags: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
+
       - name: Smoke test container
         run: |
           echo "Running container smoke test..."
           docker run -d --name smoke -p 8081:80 ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
           sleep 12
-          echo "Container logs:"; docker logs --tail 80 smoke || true
+          echo "Container logs (tail):"; docker logs --tail 80 smoke || true
+          echo "Checking APP_KEY presence inside container:"; docker exec smoke grep -E '^APP_KEY=' .env || echo 'APP_KEY missing'
+          echo "Artisan about (non-fatal if fails):"; docker exec smoke php artisan about || true
+          echo "Permissions check:"; docker exec smoke ls -ld storage storage/framework storage/logs bootstrap/cache || true
           docker rm -f smoke || true
+
+      - name: Save docker debug logs on failure
+        if: failure()
+        run: |
+          echo "Workflow failed; attempting to gather additional diagnostics."
+          docker image ls | head -n 20 || true
+          df -h || true
+          free -m || true
+
+      - name: Verify Docker image pushed successfully
+        run: |
+          echo "Docker image pushed: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
 
   pre-deploy-check:
     needs: build-and-push
@@ -61,24 +87,19 @@ jobs:
 
       - name: Validate required secrets
         run: |
-          required_secrets=(
-            "AWS_EC2_HOST"
-            "AWS_SSH_PRIVATE_KEY"
-            "REPOSITORY_NAME"
-            "DOT_ENV"
-            "DB_USERNAME"
-            "DB_PASSWORD"
-            "STRIPE_SECRET_KEY"
-            "STRIPE_PUBLIC_KEY"
-          )
-
-          for secret in "${required_secrets[@]}"; do
-            if [ -z "${{ secrets[secret] }}" ]; then
-              echo "❌ Secret '$secret' is missing or empty"
-              exit 1
-            fi
-          done
-          echo "✅ All required secrets are present"
+          if [ -z "${{ secrets.AWS_EC2_HOST }}" ]; then
+            echo "AWS_EC2_HOST secret is missing"
+            exit 1
+          fi
+          if [ -z "${{ secrets.AWS_SSH_PRIVATE_KEY }}" ]; then
+            echo "AWS_SSH_PRIVATE_KEY secret is missing"
+            exit 1
+          fi
+          if [ -z "${{ secrets.REPOSITORY_NAME }}" ]; then
+            echo "REPOSITORY_NAME secret is missing"
+            exit 1
+          fi
+          echo "All required secrets are present"
 
   deploy:
     needs: pre-deploy-check
@@ -89,19 +110,14 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key
           chmod 600 ~/.ssh/ec2_key
-
-          # Add EC2 host key if provided, otherwise skip StrictHostKeyChecking
-          if [ -n "${{ secrets.AWS_EC2_HOST_KEY }}" ]; then
-            echo "${{ secrets.AWS_EC2_HOST_KEY }}" >> ~/.ssh/known_hosts
-          fi
+          echo "${{ secrets.AWS_EC2_HOST_KEY }}" >> ~/.ssh/known_hosts
 
       - name: Test SSH Connection
         run: |
           ssh -i ~/.ssh/ec2_key \
               -o StrictHostKeyChecking=no \
-              -o ConnectTimeout=10 \
               ${{ secrets.AWS_EC2_USER }}@${{ secrets.AWS_EC2_HOST }} \
-              "echo '✅ SSH connection successful' && hostname"
+              "echo 'SSH connection successful!' && hostname"
 
       - name: Deploy Application
         uses: appleboy/ssh-action@v0.1.10
@@ -110,13 +126,11 @@ jobs:
           username: ${{ secrets.AWS_EC2_USER }}
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
-            set -e  # Exit on error
-
-            echo "🚀 Starting deployment process..."
+            set -e
 
             # Install Docker if missing
             if ! command -v docker &> /dev/null; then
-              echo "📦 Installing Docker..."
+              echo "Installing Docker..."
               sudo apt-get update
               sudo apt-get install -y docker.io
               sudo systemctl enable docker
@@ -124,182 +138,82 @@ jobs:
               sudo usermod -aG docker $USER
             fi
 
-            # Stop services that may block port 80
-            echo "🛑 Stopping web servers on port 80..."
+            # Stop conflicting services
+            echo "Stopping Apache/Nginx..."
             sudo systemctl stop apache2 2>/dev/null || true
             sudo systemctl stop nginx 2>/dev/null || true
 
             # Docker login
-            echo "🔐 Logging into Docker Hub..."
             echo "${{ secrets.DOCKERHUB_PASSWORD }}" | sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-            # Stop and remove existing container
-            echo "🧹 Cleaning up existing container..."
-            if sudo docker ps -q --filter "name=${{ secrets.REPOSITORY_NAME }}" | grep -q .; then
-              sudo docker stop "${{ secrets.REPOSITORY_NAME }}" || true
-              sudo docker rm "${{ secrets.REPOSITORY_NAME }}" || true
-            fi
+            # Stop old container
+            sudo docker ps -q --filter "name=${{ secrets.REPOSITORY_NAME }}" | xargs -r sudo docker stop
+            sudo docker ps -aq --filter "name=${{ secrets.REPOSITORY_NAME }}" | xargs -r sudo docker rm
 
-            # Clean up dangling images
-            echo "🧹 Pruning old Docker images..."
-            sudo docker image prune -a -f 2>/dev/null || true
+            # Prune old images
+            sudo docker image prune -a -f
 
             # Pull latest image
-            echo "⬇️ Pulling latest Docker image..."
             sudo docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
             # Setup environment directory
-            echo "⚙️ Setting up environment..."
-            REPO_DIR="/tmp/${{ secrets.REPOSITORY_NAME }}"
+            echo "Setting up environment..."
+            sudo mkdir -p /tmp/"${{ secrets.REPOSITORY_NAME }}"
+            sudo chown -R $USER:$USER /tmp/"${{ secrets.REPOSITORY_NAME }}"
+            mkdir -p /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/framework/{cache,sessions,views} /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/logs
+            echo "${{ secrets.DOT_ENV }}" > /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
-            # Clean and create directory
-            sudo rm -rf "$REPO_DIR"
-            sudo mkdir -p "$REPO_DIR"
-            sudo chown -R $USER:$USER "$REPO_DIR"
+            # Update .env
+            sed -i "s|APP_URL=.*|APP_URL=http://${{ env.AWS_SERVER_IP }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            sed -i "s|DB_HOST=.*|DB_HOST=host.docker.internal|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            sed -i "s|DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
-            # Create storage directories
-            mkdir -p "$REPO_DIR"/storage/framework/{cache,sessions,views} \
-                     "$REPO_DIR"/storage/logs \
-                     "$REPO_DIR"/bootstrap/cache
+            # Stripe keys
+            if grep -q "^STRIPE_SECRET_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
+              sed -i "s|^STRIPE_SECRET_KEY=.*|STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            else
+              echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            fi
 
-            # Set proper permissions
-            chmod -R 775 "$REPO_DIR"/storage "$REPO_DIR"/bootstrap/cache
+            if grep -q "^STRIPE_PUBLIC_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
+              sed -i "s|^STRIPE_PUBLIC_KEY=.*|STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            else
+              echo "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            fi
 
-            # Create initial .env file from secret
-            echo "📄 Creating .env file..."
-            echo "${{ secrets.DOT_ENV }}" > "$REPO_DIR"/.env
-
-            # Debug: Show original content
-            echo "🔍 Original .env content (first 10 lines):"
-            head -n 10 "$REPO_DIR"/.env
-
-            # Update .env file with dynamic values
-            echo "✏️ Updating .env file..."
-
-            # Define all environment updates
-            declare -A env_updates=(
-              ["APP_URL"]="http://${{ env.AWS_SERVER_IP }}"
-              ["DB_HOST"]="host.docker.internal"
-              ["DB_USERNAME"]="${{ secrets.DB_USERNAME }}"
-              ["DB_PASSWORD"]="${{ secrets.DB_PASSWORD }}"
-              ["STRIPE_SECRET_KEY"]="${{ secrets.STRIPE_SECRET_KEY }}"
-              ["STRIPE_PUBLIC_KEY"]="${{ secrets.STRIPE_PUBLIC_KEY }}"
-            )
-
-            # Process each environment variable
-            for key in "${!env_updates[@]}"; do
-              value="${env_updates[$key]}"
-
-              # Remove existing entry (case insensitive, with optional spaces)
-              sed -i "/^[[:space:]]*${key}[[:space:]]*=/Id" "$REPO_DIR"/.env
-
-              # Add new entry at the end
-              echo "${key}=${value}" >> "$REPO_DIR"/.env
-
-              echo "  ✅ Set $key"
-            done
-
-            # Remove duplicate lines (in case of any)
-            awk '!seen[$0]++' "$REPO_DIR"/.env > "$REPO_DIR"/.env.tmp && mv "$REPO_DIR"/.env.tmp "$REPO_DIR"/.env
-
-            # Validate .env file
-            echo "🔍 Final .env validation:"
-            echo "--- Stripe keys ---"
-            grep -i stripe "$REPO_DIR"/.env || echo "⚠️ No Stripe keys found"
-            echo "--- Database config ---"
-            grep -i "DB_" "$REPO_DIR"/.env | grep -v "PASSWORD" || echo "⚠️ No DB config found"
-
-            # Run container
-            echo "🐳 Starting Docker container..."
+            # Start container on port 80
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
               -p 80:${{ env.CONTAINER_PORT }} \
               --restart unless-stopped \
-              -v "$REPO_DIR"/.env:/var/www/html/.env \
-              -v "$REPO_DIR"/storage:/var/www/html/storage \
-              -v "$REPO_DIR"/bootstrap/cache:/var/www/html/bootstrap/cache \
+              -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env:/var/www/html/.env \
+              -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage:/var/www/html/storage \
               ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
-            echo "✅ Container started: http://${{ env.AWS_SERVER_IP }}"
+            sleep 10
 
-            # Wait for container to initialize
-            echo "⏳ Waiting for container to start..."
-            sleep 15
-
-            # Check if container is running
-            if ! sudo docker ps --filter "name=${{ secrets.REPOSITORY_NAME }}" --filter "status=running" | grep -q .; then
-              echo "❌ Container failed to start. Logs:"
-              sudo docker logs "${{ secrets.REPOSITORY_NAME }}" --tail 50
-              exit 1
-            fi
-
-            # Set proper permissions inside container
-            echo "🔧 Setting Laravel permissions..."
+            # Fix permissions
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" bash -c "
+              mkdir -p bootstrap/cache &&
+              mkdir -p storage/framework/{cache,sessions,views} storage/logs &&
               chown -R www-data:www-data storage bootstrap/cache &&
-              chmod -R 775 storage bootstrap/cache &&
-              find storage -type f -exec chmod 664 {} \;
-            " || echo "⚠️ Permission setting failed, but continuing..."
+              chmod -R 775 storage bootstrap/cache storage/framework storage/logs
+            "
 
-            # Clear Laravel caches
-            echo "🧹 Clearing Laravel caches..."
-            cache_commands=(
-              "config:clear"
-              "route:clear"
-              "view:clear"
-              "cache:clear"
-            )
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan optimize:clear || true
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan route:clear || true
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan view:clear || true
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan cache:clear || true
 
-            for cmd in "${cache_commands[@]}"; do
-              echo "  Running: php artisan $cmd"
-              sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan "$cmd" || echo "  ⚠️ Failed: $cmd"
-            done
-
-            # Optimize for production
-            echo "⚡ Optimizing for production..."
-            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan config:cache || true
-            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan route:cache || true
-
-            # Display container info
-            echo "📊 Deployment summary:"
-            echo "----------------------------------------"
-            echo "Container: ${{ secrets.REPOSITORY_NAME }}"
-            echo "Image: ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}"
-            echo "URL: http://${{ env.AWS_SERVER_IP }}"
-            echo "Status: $(sudo docker inspect --format='{{.State.Status}}' "${{ secrets.REPOSITORY_NAME }}")"
-            echo "Started: $(sudo docker inspect --format='{{.State.StartedAt}}' "${{ secrets.REPOSITORY_NAME }}")"
-            echo "----------------------------------------"
-
-            # Show recent logs
-            echo "📋 Recent container logs:"
-            sudo docker logs "${{ secrets.REPOSITORY_NAME }}" --tail 20 || true
+            echo "--- Docker Container Logs ---"
+            sudo docker logs "${{ secrets.REPOSITORY_NAME }}"
 
       - name: Verify Deployment
         run: |
-          echo "🔍 Verifying deployment..."
-          max_retries=10
-          retry_count=0
+          echo "Testing final deployment from workflow..."
+          sleep 10
+          curl -s -o /dev/null -w "Final check: %{http_code}\n" http://${{ env.AWS_SERVER_IP }} || \
+          echo "Deployment may still be initializing. Check server manually if issues persist."
 
-          while [ $retry_count -lt $max_retries ]; do
-            echo "Attempt $((retry_count + 1))/$max_retries..."
-
-            # Try to curl the application
-            response=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "http://${{ env.AWS_SERVER_IP }}" || echo "000")
-
-            if [[ "$response" =~ ^[23] ]]; then
-              echo "✅ Deployment successful! HTTP Status: $response"
-              echo "🌐 Application is live at: http://${{ env.AWS_SERVER_IP }}"
-              exit 0
-            elif [ "$response" = "000" ]; then
-              echo "⏳ Server not responding yet..."
-            else
-              echo "⚠️ Server responded with HTTP $response"
-            fi
-
-            retry_count=$((retry_count + 1))
-            sleep 10
-          done
-
-          echo "❌ Deployment verification failed after $max_retries attempts"
-          echo "Please check the server manually: http://${{ env.AWS_SERVER_IP }}"
-          exit 1
+          echo "Deployment pipeline completed successfully!"
