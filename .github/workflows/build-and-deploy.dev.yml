@@ -185,11 +185,11 @@ jobs:
 
             PUB_RAW="${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
             if [ -z "$PUB_RAW" ]; then
-              # Backward compatibility: allow STRIPE_PUBLISHABLE_KEY secret name
-              PUB_RAW="${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
+              # Backward compatibility: allow STRIPE_PUBLIC_KEY secret name
+              PUB_RAW="${{ secrets.STRIPE_PUBLIC_KEY }}"
             fi
             PUB_VALUE="${PUB_RAW#STRIPE_PUBLISHABLE_KEY=}"
-            PUB_VALUE="${PUB_VALUE#STRIPE_PUBLISHABLE_KEY=}"
+            PUB_VALUE="${PUB_VALUE#STRIPE_PUBLIC_KEY=}"
             PUB_VALUE=$(echo "$PUB_VALUE" | tr -d '\r' | xargs)
 
             # Write STRIPE_SECRET_KEY
