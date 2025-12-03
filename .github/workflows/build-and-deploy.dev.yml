@@ -180,8 +180,10 @@ jobs:
               echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             fi
 
-            if grep -q "^STRIPE_PUBLIC_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
-              sed -i "s|^STRIPE_PUBLIC_KEY=.*|STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            if grep -q "^STRIPE_PUBLIC_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env \
+            && sed -i "s|^STRIPE_PUBLIC_KEY=.*|STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env \
+            || echo "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+
             else
               echo "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             fi
