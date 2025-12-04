@@ -14,8 +14,32 @@ class PaymentController extends Controller
 {
     public function __construct()
     {
-        // Set Stripe API key
-        Stripe::setApiKey(config('payment.stripe_secret_key'));
+        // Resolve and set Stripe API key from multiple sources
+        $key = $this->resolveStripeSecret();
+        if (!empty($key)) {
+            Stripe::setApiKey($key);
+        }
+    }
+
+    private function resolveStripeSecret(): ?string
+    {
+        // Try module flat config first
+        $candidates = [
+            config('payment.stripe_secret_key'),
+            // Try nested module config
+            config('payment.stripe.secret'),
+            // Direct env fallback
+            env('STRIPE_SECRET_KEY'),
+            // Common alternative locations
+            config('services.stripe.secret'),
+        ];
+
+        foreach ($candidates as $value) {
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+        return null;
     }
 
     /**
@@ -250,6 +274,30 @@ class PaymentController extends Controller
         $secretKey = config('payment.stripe_secret_key');
         $publishableKey = config('payment.stripe_publishable_key');
 
+        $envPath = base_path('.env');
+        $envExists = file_exists($envPath);
+        $envReadable = is_readable($envPath);
+        $hasStripeSecretLine = false;
+        $hasStripePublishableLine = false;
+        $hasStripePublicLine = false;
+        $envSample = [];
+
+        if ($envReadable) {
+            try {
+                $lines = @file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+                foreach ($lines as $line) {
+                    if (str_starts_with($line, 'STRIPE_SECRET_KEY=')) { $hasStripeSecretLine = true; $envSample[] = 'STRIPE_SECRET_KEY=***masked***'; }
+                    if (str_starts_with($line, 'STRIPE_PUBLISHABLE_KEY=')) { $hasStripePublishableLine = true; $envSample[] = 'STRIPE_PUBLISHABLE_KEY=***masked***'; }
+                    if (str_starts_with($line, 'STRIPE_PUBLIC_KEY=')) { $hasStripePublicLine = true; $envSample[] = 'STRIPE_PUBLIC_KEY=***masked***'; }
+                    if (str_starts_with($line, 'DB_HOST=')) { $envSample[] = $line; }
+                    if (str_starts_with($line, 'APP_ENV=')) { $envSample[] = $line; }
+                    if (str_starts_with($line, 'APP_URL=')) { $envSample[] = $line; }
+                }
+            } catch (\Throwable $t) {
+                // ignore
+            }
+        }
+
         return response()->json([
             'module' => 'Payment',
             'config_loaded' => config('payment.name') !== null,
@@ -263,6 +311,16 @@ class PaymentController extends Controller
             'env_check' => [
                 'STRIPE_SECRET_KEY' => env('STRIPE_SECRET_KEY') ? 'SET' : 'NOT SET',
                 'STRIPE_PUBLISHABLE_KEY' => env('STRIPE_PUBLISHABLE_KEY') ? 'SET' : 'NOT SET',
+                'getenv_STRIPE_SECRET_KEY' => getenv('STRIPE_SECRET_KEY') ? 'SET' : 'NOT SET',
+                'getenv_STRIPE_PUBLISHABLE_KEY' => getenv('STRIPE_PUBLISHABLE_KEY') ? 'SET' : 'NOT SET',
+                'env_path' => $envPath,
+                'env_exists' => $envExists,
+                'env_readable' => $envReadable,
+                'env_has_secret_line' => $hasStripeSecretLine,
+                'env_has_publishable_line' => $hasStripePublishableLine,
+                'env_has_public_line' => $hasStripePublicLine,
+                'env_sample' => $envSample,
+                'app_env' => env('APP_ENV') ?: config('app.env'),
             ]
         ]);
     }

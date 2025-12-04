@@ -126,7 +126,7 @@ jobs:
           username: ${{ secrets.AWS_EC2_USER }}
           key: ${{ secrets.AWS_SSH_PRIVATE_KEY }}
           script: |
-            set -e  # Exit on error
+            set -e
 
             # Install Docker if missing
             if ! command -v docker &> /dev/null; then
@@ -138,25 +138,22 @@ jobs:
               sudo usermod -aG docker $USER
             fi
 
-            # Stop services that may block port 80
-            echo "Stopping Apache/Nginx if running..."
+            # Stop conflicting services
+            echo "Stopping Apache/Nginx..."
             sudo systemctl stop apache2 2>/dev/null || true
             sudo systemctl stop nginx 2>/dev/null || true
 
             # Docker login
             echo "${{ secrets.DOCKERHUB_PASSWORD }}" | sudo docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-            # Stop and remove any existing container
-            echo "Stopping and removing existing container..."
+            # Stop old container
             sudo docker ps -q --filter "name=${{ secrets.REPOSITORY_NAME }}" | xargs -r sudo docker stop
             sudo docker ps -aq --filter "name=${{ secrets.REPOSITORY_NAME }}" | xargs -r sudo docker rm
 
             # Prune old images
-            echo "Pruning old Docker images..."
             sudo docker image prune -a -f
 
             # Pull latest image
-            echo "Pulling latest Docker image..."
             sudo docker pull ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
             # Setup environment directory
@@ -165,63 +162,91 @@ jobs:
             sudo chown -R $USER:$USER /tmp/"${{ secrets.REPOSITORY_NAME }}"
             mkdir -p /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/framework/{cache,sessions,views} /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage/logs
             echo "${{ secrets.DOT_ENV }}" > /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            # Ensure .env is readable by the container's www-data (UID 33)
+            chmod 644 /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
 
-            # Update .env file with dynamic values
-            echo "Updating .env file..."
-            sed -i "s|APP_URL=.*|APP_URL=http://${{ env.AWS_SERVER_IP }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-            sed -i "s|DB_HOST=.*|DB_HOST=host.docker.internal|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-            sed -i "s|DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-            sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
-            # Add Stripe keys if not already present
-            # Replace if exists, otherwise append
+            # Update .env (app url)
+            sed -i "s|^APP_URL=.*|APP_URL=http://${{ env.AWS_SERVER_IP }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+
+            # Database connection
+            # Prefer an explicit DB_HOST secret when provided; otherwise default to localhost (container-local MySQL)
+            if [ -n "${{ secrets.DB_HOST }}" ]; then
+              sed -i "s|^DB_HOST=.*|DB_HOST=${{ secrets.DB_HOST }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            else
+              # Default to localhost; change to 172.17.0.1 or host.docker.internal if DB runs on EC2 host
+              sed -i "s|^DB_HOST=.*|DB_HOST=host.docker.internal|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            fi
+            sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${{ secrets.DB_USERNAME }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${{ secrets.DB_PASSWORD }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+
+            # --- Stripe keys (sanitize and write) ---
+            # Some users accidentally store secrets as "KEY=VALUE"; strip any leading KEY= from the secret values
+            SEC_RAW="${{ secrets.STRIPE_SECRET_KEY }}"
+            SEC_VALUE="${SEC_RAW#STRIPE_SECRET_KEY=}"
+            SEC_VALUE=$(echo "$SEC_VALUE" | tr -d '\r' | xargs)
+
+            PUB_RAW="${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
+            if [ -z "$PUB_RAW" ]; then
+              # Backward compatibility: allow STRIPE_PUBLIC_KEY secret name
+              PUB_RAW="${{ secrets.STRIPE_PUBLIC_KEY }}"
+            fi
+            PUB_VALUE="${PUB_RAW#STRIPE_PUBLISHABLE_KEY=}"
+            PUB_VALUE="${PUB_VALUE#STRIPE_PUBLIC_KEY=}"
+            PUB_VALUE=$(echo "$PUB_VALUE" | tr -d '\r' | xargs)
+
+            # Write STRIPE_SECRET_KEY
             if grep -q "^STRIPE_SECRET_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
-              sed -i "s|^STRIPE_SECRET_KEY=.*|STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+              sed -i "s|^STRIPE_SECRET_KEY=.*|STRIPE_SECRET_KEY=$SEC_VALUE|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             else
-              echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+              echo "STRIPE_SECRET_KEY=$SEC_VALUE" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             fi
 
-            if grep -q "^STRIPE_PUBLIC_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
-              sed -i "s|^STRIPE_PUBLIC_KEY=.*|STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+            # Write STRIPE_PUBLISHABLE_KEY (not STRIPE_PUBLISHABLE_KEY)
+            if grep -q "^STRIPE_PUBLISHABLE_KEY=" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env; then
+              sed -i "s|^STRIPE_PUBLISHABLE_KEY=.*|STRIPE_PUBLISHABLE_KEY=$PUB_VALUE|" /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             else
-              echo "STRIPE_PUBLIC_KEY=${{ secrets.STRIPE_PUBLIC_KEY }}" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
+              echo "STRIPE_PUBLISHABLE_KEY=$PUB_VALUE" >> /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env
             fi
 
-
-
-            # Run container on fixed port 80
-                        # Run container on fixed port 80
-            echo "Starting Docker container on port 80..."
+            # Start container on port 80
             sudo docker run -d \
               --name "${{ secrets.REPOSITORY_NAME }}" \
               -p 80:${{ env.CONTAINER_PORT }} \
               --restart unless-stopped \
-              -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env:/var/www/html/.env \
+              --add-host=host.docker.internal:host-gateway \
+              -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/.env:/var/www/html/.env:ro \
               -v /tmp/"${{ secrets.REPOSITORY_NAME }}"/storage:/var/www/html/storage \
               ${{ env.DOCKER_IMAGE }}:${{ env.DOCKER_TAG }}
 
-            echo "Container started. Host URL: http://${{ env.AWS_SERVER_IP }}"
-
-            # Wait for container to initialize
             sleep 10
 
-            # Ensure Laravel directories exist
-            echo "Creating required Laravel directories inside container..."
+            # Fix permissions inside container
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" bash -c "
               mkdir -p bootstrap/cache &&
               mkdir -p storage/framework/{cache,sessions,views} storage/logs &&
               chown -R www-data:www-data storage bootstrap/cache &&
-              chmod -R 775 storage bootstrap/cache storage/framework storage/logs
+              chmod -R 775 storage bootstrap/cache storage/framework storage/logs &&
+              chmod 644 /var/www/html/.env || true
             "
 
-            # Clear Laravel caches safely
-            echo "Clearing Laravel caches..."
-            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan config:clear || true
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan optimize:clear || true
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan route:clear || true
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan view:clear || true
             sudo docker exec "${{ secrets.REPOSITORY_NAME }}" php artisan cache:clear || true
 
             echo "--- Docker Container Logs ---"
             sudo docker logs "${{ secrets.REPOSITORY_NAME }}"
+
+            echo "--- .env presence and key lines (masked) ---"
+            sudo docker exec "${{ secrets.REPOSITORY_NAME }}" bash -lc '
+              ls -l /var/www/html/.env || true;
+              if [ -f /var/www/html/.env ]; then
+                egrep -n "^(APP_ENV|APP_URL|DB_HOST|STRIPE_SECRET_KEY|STRIPE_PUBLISHABLE_KEY|STRIPE_PUBLIC_KEY)=" /var/www/html/.env | \
+                  sed -E "s/(STRIPE_(SECRET|PUBLISHABLE|PUBLIC)_KEY)=(.*)/\1=***masked***/" || true;
+              fi'
+
+            echo "--- Payment module config-check ---"
+            curl -s http://${{ env.AWS_SERVER_IP }}/api/v1/payment/config-check || true
 
       - name: Verify Deployment
         run: |
